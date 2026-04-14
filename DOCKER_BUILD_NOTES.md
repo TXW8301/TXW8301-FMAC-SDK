@@ -50,7 +50,7 @@ Implemented and verified:
 `docker/scripts/container-build.sh`
 
 - Starts virtual display for Wine (`Xvfb`)
-- Cleans previous generated artifacts (keeps source tree intact)
+- Does not remove previous generated artifacts; artifacts are preserved in timestamped folders
 - Generates Makefile
 - Builds firmware (compile + link)
 - Runs packaging tools under Wine
@@ -134,7 +134,7 @@ SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
 - `CDK_DIR`: explicit path to extracted CDK directory
 - `CDK_AUTO_FETCH`: set to `1` to auto-download/extract when `CDK_DIR` is missing
 - `CDK_FTP_URL`: FTP URL for CDK zip (required when `CDK_AUTO_FETCH=1`)
-- `CDK_ARCHIVE`: local zip cache path (default under `SDK/CDK/`)
+-- `CDK_ARCHIVE`: local zip cache path (default under `./cdk/` in the repo)
 - `CDK_SHA256`: optional checksum verification for downloaded archive
 - `CDK_VERSION_DIR`: expected extracted folder name (default `cdk-windows-V2.8.8-20210621-1740`)
 

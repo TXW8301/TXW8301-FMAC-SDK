@@ -4,6 +4,9 @@ project/Obj/
 project/Lst/
 project/bakup/
 
+# Local CDK installer (large vendor archive) — keep out of VCS
+cdk/
+
 # Generated makefile and intermediates
 project/Makefile.linux
 project/project.elf

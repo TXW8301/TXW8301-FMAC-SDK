@@ -16,7 +16,7 @@ The vendor CDK (C-SKY MinGW toolchain) and the firmware packaging tools are dist
 - Is CI-friendly and automatable: supports repeatable releases and the optional CDK auto-bootstrap for first-time setup.
 
 Caveats:
-- You still need the vendor CDK installer (place it under SDK/CDK or use the CDK_AUTO_FETCH option).
+- You still need the vendor CDK installer (place it under `./cdk` in this repo or use the `CDK_AUTO_FETCH` option).
 - The build relies on Wine-wrapped toolchain semantics; behavior may differ slightly from native Linux cross-compilers — see DOCKER_BUILD_NOTES for details.
 
 ### What Is Implemented
@@ -38,8 +38,8 @@ Caveats:
 ### Prerequisites
 
 1. Docker on host (BuildKit-capable).
-2. CDK installer extracted at:
-   - `SDK/CDK/cdk-windows-V2.8.8-20210621-1740/`
+2. CDK installer extracted at (default):
+   - `./cdk/cdk-windows-V2.8.8-20210621-1740/` (inside this FMAC repo)
 
 Optional first-time bootstrap (no local CDK extraction yet):
 

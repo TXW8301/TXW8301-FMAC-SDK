@@ -4,8 +4,9 @@
 #
 # Requirements:
 #   • Docker with BuildKit enabled (default since Docker 23)
-#   • CDK installer extracted at SDK/CDK/cdk-windows-V2.8.8-20210621-1740/
-#     (override with CDK_DIR env var)
+#   • CDK installer extracted at ./cdk/cdk-windows-V2.8.8-20210621-1740/ (repo-local)
+#     (override with `CDK_DIR` env var). For multi-repo development (WNB + FMAC),
+#     advanced users may point `CDK_DIR` to a shared copy to avoid duplicate downloads.
 #   • Optional bootstrap for new developers:
 #       CDK_AUTO_FETCH=1 + CDK_FTP_URL can download/extract CDK automatically
 #
@@ -27,26 +28,16 @@ PROJECT_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
 # back to the project parent (one level up). This avoids incorrectly
 # resolving to an unrelated filesystem root like `/Users` when the
 # repository is checked out in a different layout.
-find_sdk_root() {
-    local dir="$1"
-    while [[ "$dir" != "/" ]]; do
-        if [[ "$(basename "$dir")" == "SDK" ]]; then
-            printf '%s' "$dir"
-            return 0
-        fi
-        dir="$(dirname "$dir")"
-    done
-    # Fallback: parent of PROJECT_ROOT
-    printf '%s' "$(cd "${PROJECT_ROOT}/.." && pwd)"
-}
-
-SDK_ROOT=$(find_sdk_root "${PROJECT_ROOT}")
-SDK_CDK_ROOT="${SDK_ROOT}/CDK"
 CDK_VERSION_DIR="${CDK_VERSION_DIR:-cdk-windows-V2.8.8-20210621-1740}"
 
-# Default CDK installer directory — user moved CDK to SDK/CDK/
-CDK_DIR="${CDK_DIR:-${SDK_CDK_ROOT}/${CDK_VERSION_DIR}}"
-CDK_ARCHIVE="${CDK_ARCHIVE:-${SDK_CDK_ROOT}/${CDK_VERSION_DIR}.zip}"
+# Default per-repo CDK location (project-local) using lowercase `cdk/`.
+# This places the CDK under the FMAC repo root by default so per-repo
+# developers don't need a global SDK directory.
+REPO_CDK_ROOT="${PROJECT_ROOT}/cdk"
+
+# Default CDK installer directory — local per-repo cdk folder
+CDK_DIR="${CDK_DIR:-${REPO_CDK_ROOT}/${CDK_VERSION_DIR}}"
+CDK_ARCHIVE="${CDK_ARCHIVE:-${REPO_CDK_ROOT}/${CDK_VERSION_DIR}.zip}"
 CDK_AUTO_FETCH="${CDK_AUTO_FETCH:-0}"
 # Default FTP location for CDK (internal server). Override via env var if needed.
 CDK_FTP_URL="${CDK_FTP_URL:-ftp://ol.taixin-semi.com/pub/cdk-windows-V2.8.8-20210621-1740.zip}"
@@ -113,7 +104,7 @@ bootstrap_cdk_if_needed() {
     [[ "${CDK_AUTO_FETCH}" == "1" ]] || return 0
     [[ -n "${CDK_FTP_URL}" ]] || fail "CDK_AUTO_FETCH=1 requires CDK_FTP_URL"
 
-    mkdir -p "${SDK_CDK_ROOT}"
+    mkdir -p "${REPO_CDK_ROOT}"
 
     if [[ ! -f "${CDK_ARCHIVE}" ]]; then
         log "CDK not found; downloading archive from FTP..."
@@ -131,12 +122,12 @@ bootstrap_cdk_if_needed() {
         warn "CDK_SHA256 not set; skipping checksum verification"
     fi
 
-    log "extracting CDK archive to ${SDK_CDK_ROOT}..."
-    extract_zip "${CDK_ARCHIVE}" "${SDK_CDK_ROOT}"
+    log "extracting CDK archive to ${REPO_CDK_ROOT}..."
+    extract_zip "${CDK_ARCHIVE}" "${REPO_CDK_ROOT}"
 
     if [[ ! -d "${CDK_DIR}" ]]; then
         local detected
-        detected=$(find "${SDK_CDK_ROOT}" -mindepth 1 -maxdepth 1 -type d -name 'cdk-windows-*' | sort | tail -1)
+        detected=$(find "${REPO_CDK_ROOT}" -mindepth 1 -maxdepth 1 -type d -name 'cdk-windows-*' | sort | tail -1)
         if [[ -n "${detected}" ]]; then
             warn "expected ${CDK_DIR}, detected ${detected}; using detected path"
             CDK_DIR="${detected}"
