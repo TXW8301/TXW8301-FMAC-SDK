@@ -140,10 +140,11 @@ SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
 
 Defaults provided in the runner:
 
-- `CDK_FTP_URL` default: `ftp://ol.taixin-semi.com/pub/cdk-windows-V2.8.8-20210621-1740.zip`
+- `CDK_FTP_URL` default: `ftp://183.47.14.74/upload/cdk-windows-V2.8.8-20210621-1740.zip`
 - `CDK_SHA256` default: `f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d`
+- `CDK_FTP_USER` / `CDK_FTP_PASS` default: `txguest` / `txguest` (example vendor credentials)
 
-Security note: the script provides a convenience default but does not embed credentials. For private FTP endpoints, pass credentials via environment variables or use a secure secrets store. If auto-download fails, the runner prints a message directing developers to https://ol.taixin-semi.com for assistance.
+Security note: the script provides a convenience default for a public vendor FTP and example credentials. Do NOT commit private credentials to the repository — pass them via environment variables, a CI secret manager, or a protected credentials file. If auto-download fails, the runner prints a message directing developers to https://ol.taixin-semi.com for assistance.
 
 ## Related Work
 

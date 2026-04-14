@@ -39,8 +39,12 @@ REPO_CDK_ROOT="${PROJECT_ROOT}/cdk"
 CDK_DIR="${CDK_DIR:-${REPO_CDK_ROOT}/${CDK_VERSION_DIR}}"
 CDK_ARCHIVE="${CDK_ARCHIVE:-${REPO_CDK_ROOT}/${CDK_VERSION_DIR}.zip}"
 CDK_AUTO_FETCH="${CDK_AUTO_FETCH:-0}"
-# Default FTP location for CDK (internal server). Override via env var if needed.
-CDK_FTP_URL="${CDK_FTP_URL:-ftp://ol.taixin-semi.com/pub/cdk-windows-V2.8.8-20210621-1740.zip}"
+# Default FTP location for CDK (vendor FTP) — override via env var if needed.
+CDK_FTP_URL="${CDK_FTP_URL:-ftp://183.47.14.74/upload/cdk-windows-V2.8.8-20210621-1740.zip}"
+# FTP credentials (optional). Example credentials used on the vendor FTP:
+#   user: txguest  pass: txguest
+CDK_FTP_USER="${CDK_FTP_USER:-txguest}"
+CDK_FTP_PASS="${CDK_FTP_PASS:-txguest}"
 # Known-good SHA256 for cdk-windows-V2.8.8-20210621-1740.zip (computed locally)
 CDK_SHA256="${CDK_SHA256:-f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d}"
 
@@ -58,16 +62,30 @@ download_file() {
     # Attempt download with curl first, then wget. On failure, print a
     # helpful message directing developers to the community portal.
     if command -v curl >/dev/null 2>&1; then
-        if ! curl -fL --retry 3 --retry-delay 2 -o "${tmp}" "${url}"; then
+        # Use --user when credentials provided
+        local curl_auth=()
+        if [[ -n "${CDK_FTP_USER:-}" ]]; then
+            curl_auth=(--user "${CDK_FTP_USER}:${CDK_FTP_PASS}")
+        fi
+        if ! curl -fL --retry 3 --retry-delay 2 "${curl_auth[@]}" -o "${tmp}" "${url}"; then
             echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
             echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
             return 1
         fi
     elif command -v wget >/dev/null 2>&1; then
-        if ! wget -O "${tmp}" "${url}"; then
-            echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
-            echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
-            return 1
+        # Pass FTP credentials to wget when provided
+        if [[ -n "${CDK_FTP_USER:-}" ]]; then
+            if ! wget --ftp-user="${CDK_FTP_USER}" --ftp-password="${CDK_FTP_PASS}" -O "${tmp}" "${url}"; then
+                echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
+                echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
+                return 1
+            fi
+        else
+            if ! wget -O "${tmp}" "${url}"; then
+                echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
+                echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
+                return 1
+            fi
         fi
     else
         fail "neither curl nor wget found on host; cannot auto-download CDK"
