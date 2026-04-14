@@ -138,6 +138,13 @@ SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
 - `CDK_SHA256`: optional checksum verification for downloaded archive
 - `CDK_VERSION_DIR`: expected extracted folder name (default `cdk-windows-V2.8.8-20210621-1740`)
 
+Defaults provided in the runner:
+
+- `CDK_FTP_URL` default: `ftp://ol.taixin-semi.com/pub/cdk-windows-V2.8.8-20210621-1740.zip`
+- `CDK_SHA256` default: `f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d`
+
+Security note: the script provides a convenience default but does not embed credentials. For private FTP endpoints, pass credentials via environment variables or use a secure secrets store. If auto-download fails, the runner prints a message directing developers to https://ol.taixin-semi.com for assistance.
+
 ## Related Work
 
 Jira key: `TXW8301-14`

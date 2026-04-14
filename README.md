@@ -44,8 +44,10 @@ Caveats:
 Optional first-time bootstrap (no local CDK extraction yet):
 
 - `CDK_AUTO_FETCH=1`
-- `CDK_FTP_URL` set to Taixin FTP zip URL
-- `CDK_SHA256` (optional, recommended)
+- `CDK_FTP_URL` set to Taixin FTP zip URL (default: `ftp://ol.taixin-semi.com/pub/cdk-windows-V2.8.8-20210621-1740.zip`)
+- `CDK_SHA256` (recommended): `f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d`
+
+Note: the script includes a default FTP URL and checksum for convenience. Do NOT commit credentials into the repository; prefer passing credentials via environment variables or a secrets manager.
 
 ### Run
 
@@ -60,12 +62,12 @@ Compile only (skip vendor packaging):
 SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
 ```
 
-First-time bootstrap from FTP:
+First-time bootstrap from FTP (example):
 
 ```bash
 CDK_AUTO_FETCH=1 \
 CDK_FTP_URL='ftp://<user>:<pass>@<host>/<path>/cdk-windows-V2.8.8-20210621-1740.zip' \
-CDK_SHA256='<optional_sha256>' \
+CDK_SHA256='f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d' \
 ./docker/run-fmac-docker.sh
 ```
 

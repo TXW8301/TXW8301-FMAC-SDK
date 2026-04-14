@@ -31,8 +31,10 @@ CDK_VERSION_DIR="${CDK_VERSION_DIR:-cdk-windows-V2.8.8-20210621-1740}"
 CDK_DIR="${CDK_DIR:-${SDK_CDK_ROOT}/${CDK_VERSION_DIR}}"
 CDK_ARCHIVE="${CDK_ARCHIVE:-${SDK_CDK_ROOT}/${CDK_VERSION_DIR}.zip}"
 CDK_AUTO_FETCH="${CDK_AUTO_FETCH:-0}"
-CDK_FTP_URL="${CDK_FTP_URL:-}"
-CDK_SHA256="${CDK_SHA256:-}"
+# Default FTP location for CDK (internal server). Override via env var if needed.
+CDK_FTP_URL="${CDK_FTP_URL:-ftp://ol.taixin-semi.com/pub/cdk-windows-V2.8.8-20210621-1740.zip}"
+# Known-good SHA256 for cdk-windows-V2.8.8-20210621-1740.zip (computed locally)
+CDK_SHA256="${CDK_SHA256:-f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d}"
 
 IMAGE_TAG=${IMAGE_TAG:-txw8301-fmac-sdk:2.4.1.5-40938}
 
@@ -45,10 +47,20 @@ download_file() {
     local out="$2"
     local tmp="${out}.part"
 
+    # Attempt download with curl first, then wget. On failure, print a
+    # helpful message directing developers to the community portal.
     if command -v curl >/dev/null 2>&1; then
-        curl -fL --retry 3 --retry-delay 2 -o "${tmp}" "${url}"
+        if ! curl -fL --retry 3 --retry-delay 2 -o "${tmp}" "${url}"; then
+            echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
+            echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
+            return 1
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        wget -O "${tmp}" "${url}"
+        if ! wget -O "${tmp}" "${url}"; then
+            echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
+            echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
+            return 1
+        fi
     else
         fail "neither curl nor wget found on host; cannot auto-download CDK"
     fi
@@ -88,7 +100,9 @@ bootstrap_cdk_if_needed() {
 
     if [[ ! -f "${CDK_ARCHIVE}" ]]; then
         log "CDK not found; downloading archive from FTP..."
-        download_file "${CDK_FTP_URL}" "${CDK_ARCHIVE}"
+        if ! download_file "${CDK_FTP_URL}" "${CDK_ARCHIVE}"; then
+            fail "CDK download failed. Please request the CDK from https://ol.taixin-semi.com or set CDK_DIR to a local copy."
+        fi
     else
         log "using existing CDK archive: ${CDK_ARCHIVE}"
     fi
