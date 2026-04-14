@@ -1,0 +1,130 @@
+name: Release Firmware
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      cdk_auto_fetch:
+        description: 'Set to 1 to auto-download the CDK (requires FTP secrets)'
+        required: false
+        default: '0'
+      cdk_ftp_url:
+        description: 'CDK FTP URL to download from when auto-fetching'
+        required: false
+        default: 'ftp://183.47.14.74/upload/cdk-windows-V2.8.8-20210621-1740.zip'
+      cdk_sha256:
+        description: 'Optional SHA256 for CDK archive verification'
+        required: false
+        default: 'f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup QEMU (for buildx emulation)
+        uses: docker/setup-qemu-action@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Locate or download CDK (optional)
+        id: cdk
+        run: |
+          set -euo pipefail
+          cd "${{ github.workspace }}"
+          echo "Looking for repo-local CDK under ./cdk/..."
+          CDK_DIR=$(ls -d cdk/cdk-windows-* 2>/dev/null | tail -n1 || true)
+          if [ -n "$CDK_DIR" ]; then
+            echo "Found CDK at $CDK_DIR"
+            echo "cdk_dir=$CDK_DIR" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.cdk_auto_fetch }}" = "1" ]; then
+            echo "Attempting to download CDK from ${{ github.event.inputs.cdk_ftp_url }}"
+            mkdir -p cdk
+            if [ -n "${{ secrets.CDK_FTP_USER }}" ]; then
+              curl -u "${{ secrets.CDK_FTP_USER }}:${{ secrets.CDK_FTP_PASS }}" -L -o cdk/cdk.zip "${{ github.event.inputs.cdk_ftp_url }}"
+            else
+              curl -L -o cdk/cdk.zip "${{ github.event.inputs.cdk_ftp_url }}"
+            fi
+            unzip -q cdk/cdk.zip -d cdk
+            CDK_DIR=$(ls -d cdk/cdk-windows-* 2>/dev/null | tail -n1 || true)
+            if [ -n "$CDK_DIR" ]; then
+              echo "cdk_dir=$CDK_DIR" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "cdk_dir=" >> $GITHUB_OUTPUT
+            echo "Failed to extract CDK" >&2
+            exit 1
+          fi
+          echo "No CDK found and auto-fetch not requested; provide CDK in ./cdk or run workflow with cdk_auto_fetch=1" >&2
+          echo "cdk_dir=" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: Build Docker image (with CDK if available)
+        env:
+          IMAGE_TAG: txw8301-fmac-sdk:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cd "${{ github.workspace }}"
+          docker buildx create --use || true
+          if [ -n "${{ steps.cdk.outputs.cdk_dir }}" ]; then
+            echo "Building image with CDK from: ${{ steps.cdk.outputs.cdk_dir }}"
+            docker buildx build --load --platform linux/amd64 --build-context "cdk-installer=${{ steps.cdk.outputs.cdk_dir }}" -f docker/Dockerfile -t "${IMAGE_TAG}" "${{ github.workspace }}"
+          else
+            echo "Building image without CDK build-context (CDK must be embedded or provided)" >&2
+            docker buildx build --load --platform linux/amd64 -f docker/Dockerfile -t "${IMAGE_TAG}" "${{ github.workspace }}"
+          fi
+
+      - name: Run container build pipeline
+        env:
+          IMAGE_TAG: txw8301-fmac-sdk:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cd "${{ github.workspace }}"
+          # Run the image's default entrypoint (container-build.sh) with the repository mounted
+          docker run --rm -v "${{ github.workspace }}:/work/fmac:z" -e PROJECT_ROOT=/work/fmac -e PROJECT_DIR=/work/fmac/project -e SKIP_PACKAGING=0 "${IMAGE_TAG}"
+
+      - name: Locate built firmware artifact
+        id: find_artifact
+        run: |
+          set -euo pipefail
+          cd "${{ github.workspace }}"
+          ART=$(find project/build -type f -name 'txw8301.bin' | sort | tail -n1 || true)
+          if [ -z "$ART" ]; then
+            echo "No txw8301.bin found in project/build" >&2
+            exit 1
+          fi
+          echo "artifact_path=$ART" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name || github.sha }}
+          release_name: Release ${{ github.ref_name || github.sha }}
+          body: Automated build for ${{ github.ref_name || github.sha }}
+          draft: false
+          prerelease: false
+
+      - name: Upload firmware to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.find_artifact.outputs.artifact_path }}
+          asset_name: txw8301.bin
+          asset_content_type: application/octet-stream
