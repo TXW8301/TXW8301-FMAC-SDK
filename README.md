@@ -41,14 +41,13 @@ Caveats:
 2. CDK installer extracted at (default):
    - `./cdk/cdk-windows-V2.8.8-20210621-1740/` (inside this FMAC repo)
 
-Optional first-time bootstrap (no local CDK extraction yet):
+If no CDK is present, the runner will auto-download the CDK into `./cdk/` by default to simplify first-time onboarding. To disable automatic download set `CDK_AUTO_FETCH=0`.
 
-- `CDK_AUTO_FETCH=1`
 - `CDK_FTP_URL` set to Taixin FTP zip URL (default: `ftp://183.47.14.74/upload/cdk-windows-V2.8.8-20210621-1740.zip`)
 - `CDK_FTP_USER` / `CDK_FTP_PASS`: optional FTP credentials (example: `txguest` / `txguest`)
 - `CDK_SHA256` (recommended): `f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d`
 
-Note: the script includes a default FTP URL and checksum for convenience. Do NOT commit credentials into the repository; prefer passing credentials via environment variables or a secrets manager.
+Note: the script includes a default FTP URL and an example credential pair for convenience. Do NOT commit private credentials into the repository; prefer passing credentials via environment variables or a secrets manager.
 
 ### Run
 

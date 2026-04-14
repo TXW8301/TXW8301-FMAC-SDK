@@ -37,8 +37,11 @@ REPO_CDK_ROOT="${PROJECT_ROOT}/cdk"
 
 # Default CDK installer directory — local per-repo cdk folder
 CDK_DIR="${CDK_DIR:-${REPO_CDK_ROOT}/${CDK_VERSION_DIR}}"
+# Default CDK archive path and auto-fetch behavior. By default, if no CDK
+# is present the runner will auto-download into `./cdk/` to simplify
+# onboarding. Set `CDK_AUTO_FETCH=0` to disable automatic download.
 CDK_ARCHIVE="${CDK_ARCHIVE:-${REPO_CDK_ROOT}/${CDK_VERSION_DIR}.zip}"
-CDK_AUTO_FETCH="${CDK_AUTO_FETCH:-0}"
+CDK_AUTO_FETCH="${CDK_AUTO_FETCH:-1}"
 # Default FTP location for CDK (vendor FTP TaiXin TXW830x AH-SDK Development Guide_20241009152015.pdf page 7) — override via env var if needed.
 CDK_FTP_URL="${CDK_FTP_URL:-ftp://183.47.14.74/upload/cdk-windows-V2.8.8-20210621-1740.zip}"
 # FTP credentials (optional). Example credentials used on the vendor FTP:

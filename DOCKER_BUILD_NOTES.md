@@ -132,9 +132,9 @@ SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
 ## Runner Environment Variables
 
 - `CDK_DIR`: explicit path to extracted CDK directory
-- `CDK_AUTO_FETCH`: set to `1` to auto-download/extract when `CDK_DIR` is missing
-- `CDK_FTP_URL`: FTP URL for CDK zip (required when `CDK_AUTO_FETCH=1`)
--- `CDK_ARCHIVE`: local zip cache path (default under `./cdk/` in the repo)
+- `CDK_AUTO_FETCH`: default `1` (auto-download into `./cdk/` when `CDK_DIR` is missing); set to `0` to disable
+- `CDK_FTP_URL`: FTP URL for CDK zip (used when auto-download runs)
+- `CDK_ARCHIVE`: local zip cache path (default under `./cdk/` in the repo)
 - `CDK_SHA256`: optional checksum verification for downloaded archive
 - `CDK_VERSION_DIR`: expected extracted folder name (default `cdk-windows-V2.8.8-20210621-1740`)
 
