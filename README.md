@@ -132,3 +132,87 @@ Generated artifacts are preserved in timestamped build folders; source/project f
 
 - Vendor packaging batch scripts still print a Windows backup-path warning, but packaging succeeds.
 - Generated outputs are ignored via repository `.gitignore`.
+
+---
+
+## CI / Release
+
+The workflow file is at `.github/workflows/release.yml`. It builds the Docker image, runs the full firmware pipeline, and publishes a GitHub Release with `txw8301.bin` attached.
+
+### Triggers
+
+| Trigger | When |
+|---|---|
+| Push a `v*` tag | Automatically starts a release build |
+| `workflow_dispatch` | Manual run from GitHub UI or CLI |
+
+### Trigger via git tag (recommended for formal releases)
+
+```bash
+git tag -a TXW8301_FMAC-v2.4.1.5-40938 -m "Release TXW8301_FMAC-v2.4.1.5-40938"
+git push origin TXW8301_FMAC-v2.4.1.5-40938
+```
+
+> Note: the tag-triggered path requires `./cdk/` to be present in the repo (CDK is not auto-fetched on tag push). If CDK is not committed, use the manual dispatch path below instead.
+
+### Trigger manually (CDK auto-download via vendor FTP)
+
+**GitHub CLI:**
+
+```bash
+# Minimal — uses all workflow defaults (FTP creds + firmware version tag)
+gh workflow run release.yml -f cdk_auto_fetch=1
+
+# Explicit — override the release tag
+gh workflow run release.yml \
+  -f cdk_auto_fetch=1 \
+  -f release_tag=TXW8301_FMAC-v2.4.1.5-40938
+```
+
+**GitHub web UI:**
+
+Go to `Actions` → `Release Firmware` → `Run workflow` → set `cdk_auto_fetch` to `1` → click `Run workflow`.
+
+### Watch live log output
+
+```bash
+# Stream live step status until run completes
+gh run watch $(gh run list --limit 1 --json databaseId -q '.[0].databaseId')
+
+# Or list runs first to pick a specific ID
+gh run list --limit 5
+gh run watch <RUN_ID>
+```
+
+### View full logs after a run
+
+```bash
+# Full log for all steps
+gh run view <RUN_ID> --log
+
+# Only failed steps
+gh run view <RUN_ID> --log-failed
+```
+
+### Cancel or delete a run
+
+```bash
+# Cancel an in-progress or queued run
+gh run cancel <RUN_ID>
+
+# Delete the run record entirely (clean history)
+gh run delete <RUN_ID>
+```
+
+### Workflow inputs reference
+
+| Input | Default | Description |
+|---|---|---|
+| `cdk_auto_fetch` | `0` | Set to `1` to download CDK from vendor FTP |
+| `cdk_ftp_url` | Taixin FTP URL | CDK zip download URL |
+| `cdk_ftp_user` | `txguest` | FTP username (public vendor credential) |
+| `cdk_ftp_pass` | `txguest` | FTP password (public vendor credential) |
+| `cdk_sha256` | known hash | SHA256 of CDK zip for integrity verification |
+| `release_tag` | `TXW8301_FMAC-v2.4.1.5-40938` | Tag and name used for the GitHub Release |
+
+Credentials can also be set as GitHub repository secrets (`CDK_FTP_USER`, `CDK_FTP_PASS`) to override the defaults without editing the workflow file.
