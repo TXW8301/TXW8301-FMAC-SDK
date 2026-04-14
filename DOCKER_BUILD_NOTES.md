@@ -1,118 +1,144 @@
-# TXW8301 FMAC Containerized Build - Implementation Complete
+# TXW8301 FMAC Containerized Build Notes
 
-## Overview
-Successfully established a containerized build environment for FMAC firmware using Docker, Wine 32-bit support, and the CDK V2.8.8 Windows toolchain.
+## Scope
 
-## Key Components
+Repository: `SDK/TX_AH_SDK_2.4/FMAC/TXW8301_FMAC-v2.4.1.5-40938`
 
-### 1. **Docker Image** (`Dockerfile`)
+Goal: run the vendor FMAC firmware build entirely in Docker, including Windows CDK toolchain usage and vendor packaging tools.
+
+## Final Status
+
+Implemented and verified:
+
+- Docker image builds successfully
+- CDK V2.8.8 is extracted/installed in container
+- Compiler and linker run under Wine
+- Makefile is generated from `project/txw4002a.cdkproj`
+- Full compile/link succeeds
+- Packaging (`BinScript.exe` + `makecode.exe`) succeeds
+- Artifacts are staged under `project/build/YYYYMMDD_HHMM`
+
+## Architecture
+
+### Docker Image
+
+`docker/Dockerfile`
+
 - Base: Ubuntu 22.04
-- Packages: wine (64-bit), wine32 (32-bit), xvfb, unshield, build-essential
-- WINEARCH=win32 for 32-bit binary support
-- 2.54 GB total size with CDK toolchain installed
+- Installs: `wine`, `wine32`, `xvfb`, `unshield`, build tools
+- Uses `WINEARCH=win32` for 32-bit CDK executables
 
-### 2. **CDK Installation** (`docker/scripts/install-cdk.sh`)
-- Extracts CDK via `unshield` (no Windows boot/setup needed)
-- Installs to Wine C: drive at original Windows path
-- Creates Linux wrapper scripts for each compiler tool
-- 27 compiler wrappers created automatically
+### CDK Installation
 
-### 3. **Makefile Generator** (`docker/scripts/cdkproj_to_makefile.py`)
-- Parses CDK project XML (`txw4002a.cdkproj`)
-- Generates complete GNU Makefile for Linux cross-compilation  
-- Extracts: flags, defines, include paths, sources, libraries
-- Handles Windows path conversion for Wine linker compatibility
+`docker/scripts/install-cdk.sh`
 
-### 4. **Build Orchestration**
-- `run-fmac-docker.sh`: Host-side script to build image and run container
-- `container-build.sh`: In-container build pipeline
-- Auto-configuration of PROJECT_DIR paths
+- Extracts InstallShield payload via `unshield`
+- Installs toolchain into Wine prefix paths expected by vendor tools
+- Creates Linux wrapper commands for C-SKY tool binaries
 
-## Build Pipeline Verification
+### Makefile Generation
 
-✅ **Stages Confirmed Working:**
-1. Docker image builds successfully
-2. CDK toolchain extracts and installs
-3. csky-elfabiv2-gcc wrapper responds to `--version`
-4. Makefile generates correctly with all source files
-5. Individual source files (.c) compile to object files (.o)
-6. Linker invokes without crashing
-7. Object files are successfully linked
-8. Linker finds pre-compiled libraries (libcore.a, libwifi.a, etc)
+`docker/scripts/cdkproj_to_makefile.py`
 
-## Current Status
+- Parses `project/txw4002a.cdkproj`
+- Generates `project/Makefile.linux`
+- Handles include/define/source extraction and linker flags
+- Includes linker group handling for vendor static libraries
 
-**READY FOR PRODUCTION USE** when:
-1. Project vendor library symbols are resolved (libcore.a reference fix)
-2. Packaging stage (BinScript.exe + makecode.exe) tested under Wine
-3. Final firmware artifact (txw8301.bin) validated
+### Build Orchestration
 
-**Test Command:**
+`docker/scripts/container-build.sh`
+
+- Starts virtual display for Wine (`Xvfb`)
+- Cleans previous generated artifacts (keeps source tree intact)
+- Generates Makefile
+- Builds firmware (compile + link)
+- Runs packaging tools under Wine
+- Stages outputs to `project/build/YYYYMMDD_HHMM`
+
+`docker/run-fmac-docker.sh`
+
+- Builds Docker image with CDK build context
+- Runs container with project mounted
+- Supports optional host-side CDK bootstrap from FTP for first-time setup
+
+## Artifact Policy
+
+Per-run output folder:
+
+- `project/build/YYYYMMDD_HHMM/`
+
+Typical staged files:
+
+- `project.elf`
+- `project.hex`
+- `project.map`
+- `txw8301.bin`
+- `param.bin` (if generated)
+- `APP.bin` (if generated)
+- `txw8301_v2.4.1.5-40938_*.bin`
+
+Cleanup behavior before each run:
+
+- Removes prior generated content including old `project/build`, `Obj`, `Lst`, `bakup`, and top-level generated firmware/intermediate files
+- Keeps project source files and vendor project inputs unchanged
+
+## Git Ignore Policy
+
+`.gitignore` in FMAC repo now excludes generated outputs, including:
+
+- `project/build/`
+- `project/Obj/`
+- `project/Lst/`
+- `project/bakup/`
+- `project/Makefile.linux`
+- `project/project.elf`, `project/project.hex`, `project/project.map`
+- `project/APP.bin`, `project/param.bin`, `project/txw8301.bin`, `project/txw8301_*.bin`
+
+## Commands
+
+Run full build:
+
 ```bash
 cd SDK/TX_AH_SDK_2.4/FMAC/TXW8301_FMAC-v2.4.1.5-40938
 ./docker/run-fmac-docker.sh
 ```
 
-**Skip Packaging (compile-only test):**
+First-time bootstrap (no pre-extracted CDK directory):
+
+```bash
+CDK_AUTO_FETCH=1 \
+CDK_FTP_URL='ftp://<user>:<pass>@<host>/<path>/cdk-windows-V2.8.8-20210621-1740.zip' \
+CDK_SHA256='<optional_sha256>' \
+./docker/run-fmac-docker.sh
+```
+
+Explicit path override:
+
+```bash
+CDK_DIR=/abs/path/to/cdk-windows-V2.8.8-20210621-1740 ./docker/run-fmac-docker.sh
+```
+
+Compile-only (skip packaging):
+
 ```bash
 SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
 ```
 
-## Technical Achievements
+## Known Notes
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Wine 32-bit Support | ✅ | PE32 .exe files run successfully |
-| Compiler Invocation | ✅ | GCC works, cc1.exe found, cc1plus.exe found |
-| Linker | ✅ | ld.exe links object files and libraries |
-| Makefile Generation | ✅ | 819-line Makefile with 191 source files |
-| Dependency Resolution | ✅ | -L paths resolved, libraries found |
-| Compilation | ✅ | Source files compile to .o |
-| X11/Display | ✅ | Xvfb provides virtual display for Wine |
+- Vendor batch script path handling still prints a backup-path warning in Wine output.
+- This warning is non-fatal; packaging and firmware generation complete successfully.
 
-## Known Limitations
+## Runner Environment Variables
 
-1. **Linker symbol reference**: `libcore.a` references symbols expected in project sources
-   - Not a toolchain issue; project configuration matter
-2. **Packaging stage**: Not yet tested under Wine (requires BinScript.exe invocation)
+- `CDK_DIR`: explicit path to extracted CDK directory
+- `CDK_AUTO_FETCH`: set to `1` to auto-download/extract when `CDK_DIR` is missing
+- `CDK_FTP_URL`: FTP URL for CDK zip (required when `CDK_AUTO_FETCH=1`)
+- `CDK_ARCHIVE`: local zip cache path (default under `SDK/CDK/`)
+- `CDK_SHA256`: optional checksum verification for downloaded archive
+- `CDK_VERSION_DIR`: expected extracted folder name (default `cdk-windows-V2.8.8-20210621-1740`)
 
-## File Structure
-```
-SDK/TX_AH_SDK_2.4/FMAC/TXW8301_FMAC-v2.4.1.5-40938/
-├── docker/
-│   ├── Dockerfile                    [Updated with WINEARCH, wine32]
-│   ├── run-fmac-docker.sh           [Mounts full FMAC tree]
-│   └── scripts/
-│       ├── install-cdk.sh           [NEW - unshield extraction]
-│       ├── cdkproj_to_makefile.py   [NEW - Makefile generator]
-│       └── container-build.sh       [Updated with PROJECT_DIR_ABS]
-├── project/
-│   ├── txw4002a.cdkproj            [CDK project file - parsed]
-│   ├── Makefile.linux              [Generated at build time]
-│   ├── Obj/                        [Build artifacts - created at runtime]
-│   └── Lst/                        [Build listings - created at runtime]
-└── libs/
-    ├── libcore.a                   [Pre-compiled vendor libraries]
-    └── ...
-```
+## Related Work
 
-## Build Timeline
-
-- **Identified**: 32-bit (.exe) support broken in Ubuntu 22.04
-- **Solution**: Added wine32 + WINEARCH=win32  
-- **Compiler Flags**: Fixed -mabiv2 / -mno-hard-float not supported
-- **Paths**: Resolved Wine linker path mapping via PROJECT_DIR_ABS
-- **Mounting**: Fixed relative path resolution by mounting entire FMAC tree
-
-## Next Actions (Beyond Scope)
-
-1. Test packaging via `wine BinScript.exe BinScript.BinScript`
-2. Test `wine makecode.exe` for firmware binary generation
-3. Validate final txw8301.bin output
-4. Performance profiling if needed
-5. Cache optimization for Docker image reuse
-
----
-**Commit**: 6965c02  
-**Branch**: TXW8301-14  
-**Date**: 2026-04-14
+Jira key: `TXW8301-14`

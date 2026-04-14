@@ -1,41 +1,86 @@
 # TXW8301-FMAC-SDK
-TX_AH SDK 2.4 FMAC firmware development repository
+TX_AH SDK 2.4 FMAC firmware development repository.
 
 ## Docker Build (TXW8301-14)
 
-This repository now includes a Docker-based FMAC build pipeline for SDK `v2.4.1.5-40938`.
+This repository includes a fully containerized FMAC firmware build for SDK `v2.4.1.5-40938`, using the vendor Windows CDK under Wine.
 
-Files:
-- `docker/Dockerfile`: base image with Wine and build prerequisites.
-- `docker/scripts/container-build.sh`: in-container build pipeline.
-- `docker/run-fmac-docker.sh`: host wrapper to build and run the container.
+### What Is Implemented
+
+- Docker image with Wine 32-bit support (`WINEARCH=win32`, `wine32`, `wine64`)
+- CDK V2.8.8 extraction with `unshield` and install into Wine prefix
+- Auto-generated GNU Makefile from `project/txw4002a.cdkproj`
+- Compile, link, and packaging stages running in container
+- Build artifact staging under `project/build/YYYYMMDD_HHMM`
+- Automatic cleanup of previous generated artifacts before each run
+
+### Key Files
+
+- `docker/Dockerfile`: toolchain/runtime image
+- `docker/scripts/install-cdk.sh`: CDK extraction and wrapper setup
+- `docker/scripts/cdkproj_to_makefile.py`: CDK project -> Makefile generator
+- `docker/scripts/container-build.sh`: in-container build orchestration
+- `docker/run-fmac-docker.sh`: host-side wrapper
 
 ### Prerequisites
 
-1. Install Docker on the host.
-2. Provide a C-SKY toolchain on the host and export `CSKY_BIN_DIR` (read-only mounted into container).
-3. Provide `FMAC_BUILD_CMD` that performs compile/link and emits:
-	- `project/Obj/txw4002a.elf`
-	- `project/Obj/txw4002a.ihex`
-	- `project/Lst/txw4002a.map`
+1. Docker on host (BuildKit-capable).
+2. CDK installer extracted at:
+   - `SDK/CDK/cdk-windows-V2.8.8-20210621-1740/`
+
+Optional first-time bootstrap (no local CDK extraction yet):
+
+- `CDK_AUTO_FETCH=1`
+- `CDK_FTP_URL` set to Taixin FTP zip URL
+- `CDK_SHA256` (optional, recommended)
 
 ### Run
 
 ```bash
-cd /path/to/TXW8301_FMAC-v2.4.1.5-40938
-export CSKY_BIN_DIR=/opt/csky/bin
-export CSKY_PREFIX=csky-elfabiv2-
-export FMAC_BUILD_CMD='your_compile_and_link_command_here'
+cd SDK/TX_AH_SDK_2.4/FMAC/TXW8301_FMAC-v2.4.1.5-40938
 ./docker/run-fmac-docker.sh
 ```
 
-Optional:
-- `SKIP_PACKAGING=1` skips Wine packaging (`BinScript.exe`/`makecode.exe`) for compile-only checks.
+Compile only (skip vendor packaging):
 
-### What the container validates
+```bash
+SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
+```
 
-1. C-SKY toolchain binaries are discoverable.
-2. Compile stage outputs exist (`ELF`, `IHEX`, `MAP`).
-3. Packaging runs under Wine and produces `project/txw8301.bin`.
+First-time bootstrap from FTP:
 
-If packaging succeeds, the SDK build is considered functional for artifact generation in Docker.
+```bash
+CDK_AUTO_FETCH=1 \
+CDK_FTP_URL='ftp://<user>:<pass>@<host>/<path>/cdk-windows-V2.8.8-20210621-1740.zip' \
+CDK_SHA256='<optional_sha256>' \
+./docker/run-fmac-docker.sh
+```
+
+Explicit path override:
+
+```bash
+CDK_DIR=/abs/path/to/cdk-windows-V2.8.8-20210621-1740 ./docker/run-fmac-docker.sh
+```
+
+### Build Outputs
+
+Each run creates a timestamped output folder:
+
+- `project/build/YYYYMMDD_HHMM/`
+
+Typical files in that folder:
+
+- `project.elf`
+- `project.hex`
+- `project.map`
+- `txw8301.bin`
+- `param.bin` (when generated)
+- `APP.bin` (when generated)
+- `txw8301_v2.4.1.5-40938_*.bin`
+
+The script removes previous generated artifacts before each run while keeping source/project files intact.
+
+### Notes
+
+- Vendor packaging batch scripts still print a Windows backup-path warning, but packaging succeeds.
+- Generated outputs are ignored via repository `.gitignore`.
