@@ -52,7 +52,8 @@ Note: the script includes a default FTP URL and an example credential pair for c
 ### Run
 
 ```bash
-cd SDK/TX_AH_SDK_2.4/FMAC/TXW8301_FMAC-v2.4.1.5-40938
+# Change into the FMAC repository directory (example)
+cd SDK/TX_AH_SDK_2.4/FMAC/<FMAC_REPO_DIR>
 ./docker/run-fmac-docker.sh
 ```
 
