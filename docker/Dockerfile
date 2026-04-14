@@ -9,7 +9,8 @@ ENV WINEDEBUG=-all
 
 # Enable i386 architecture for wine32
 RUN dpkg --add-architecture i386 \
-    && apt-get update && apt-get install -y --no-install-recommends \
+    && for i in 1 2 3 4 5; do apt-get update && break || sleep 5; done \
+    && apt-get install -y --no-install-recommends \
         bash \
         ca-certificates \
         file \

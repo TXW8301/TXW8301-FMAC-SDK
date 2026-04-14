@@ -117,30 +117,32 @@ jobs:
           fi
           echo "artifact_path=$ART" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create GitHub release and upload firmware
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.event.inputs.release_tag || github.ref_name || github.sha }}
-          release_name: Release ${{ github.event.inputs.release_tag || github.ref_name || github.sha }}
-          body: Automated build for ${{ github.event.inputs.release_tag || github.ref_name || github.sha }}
-          draft: false
-          prerelease: false
-
-      - name: Annotate release with build metadata
-        if: always()
         run: |
-          echo "Release created for ${{ github.ref_name || github.sha }}"
-          echo "Image tag: $IMAGE_TAG"
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y jq
 
-      - name: Upload firmware to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.find_artifact.outputs.artifact_path }}
-          asset_name: txw8301.bin
-          asset_content_type: application/octet-stream
+          TAG="${{ github.event.inputs.release_tag || github.ref_name || github.sha }}"
+          echo "Creating release for $TAG"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases"
+
+          # Create release
+          BODY=$(jq -n --arg tag "$TAG" --arg body "Automated build for $TAG" '{tag_name:$tag, name:$tag, body:$body, draft:false, prerelease:false}')
+          RESP=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" -H "Content-Type: application/json" -d "$BODY" "$API")
+
+          UPLOAD_URL=$(echo "$RESP" | jq -r .upload_url)
+          if [ -z "$UPLOAD_URL" ] || [ "$UPLOAD_URL" = "null" ]; then
+            echo "Failed to create release: $RESP" >&2
+            exit 1
+          fi
+          RELEASE_HTML_URL=$(echo "$RESP" | jq -r .html_url)
+          UPLOAD_URL=${UPLOAD_URL%\{*}
+
+          ART="${{ steps.find_artifact.outputs.artifact_path }}"
+          echo "Uploading $ART to $UPLOAD_URL"
+          UPLOAD_RESP=$(curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Content-Type: application/octet-stream" --data-binary @"$ART" "$UPLOAD_URL?name=txw8301.bin")
+          echo "Release created: $RELEASE_HTML_URL"
+          echo "$UPLOAD_RESP" | jq -r '.' || true
