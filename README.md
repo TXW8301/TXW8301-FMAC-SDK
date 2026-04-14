@@ -47,6 +47,8 @@ If no CDK is present, the runner will auto-download the CDK into `./cdk/` by def
 - `CDK_FTP_USER` / `CDK_FTP_PASS`: optional FTP credentials (example: `txguest` / `txguest`)
 - `CDK_SHA256` (recommended): `f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d`
 
+Apple Silicon (M1/M2) note: On Apple Silicon (aarch64/arm64) hosts the runner will automatically build an amd64 image using Docker Buildx and QEMU so `wine`/`wine32` and the vendor i386 packages are available. Ensure Docker Desktop provides Buildx/QEMU support or run the one-time commands documented in `DOCKER_BUILD_NOTES.md` before building on M1/M2.
+
 Note: the script includes a default FTP URL and an example credential pair for convenience. Do NOT commit private credentials into the repository; prefer passing credentials via environment variables or a secrets manager.
 
 ### Run

@@ -147,6 +147,26 @@ Defaults provided in the runner:
 
 Security note: the script provides a convenience default for a public vendor FTP and example credentials. Do NOT commit private credentials to the repository — pass them via environment variables, a CI secret manager, or a protected credentials file. If auto-download fails, the runner prints a message directing developers to https://ol.taixin-semi.com for assistance.
 
-## Related Work
+### Apple Silicon (M1/M2) / arm64 hosts
 
-Jira key: `TXW8301-14`
+- On Apple Silicon (aarch64/arm64) hosts the runner auto-detects the host architecture and will build the Docker image for `linux/amd64` using `docker buildx build --platform linux/amd64 --load`. This ensures `wine`/`wine32` and i386 packages required by the vendor CDK are available inside the image and that the Windows CDK can run under Wine.
+
+- Requirements and troubleshooting:
+	- Ensure Docker Desktop or your Docker Engine has Buildx and QEMU/binfmt support enabled. Docker Desktop normally provides this.
+	- If `docker buildx` is not configured, run the following once on the host to enable multi-arch builds and QEMU emulation:
+
+```bash
+docker buildx create --use
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+```
+
+	- If buildx or emulation is unavailable, the runner falls back to a regular `docker build`. In that case the resulting image may not contain `wine32`/i386 packages and the build may fail.
+
+- Overrides:
+	- Force amd64 image build explicitly:
+
+```bash
+DOCKER_BUILD_PLATFORM=linux/amd64 ./docker/run-fmac-docker.sh
+```
+
+	- On Intel (x86_64) Macs no special action is required; the image will be built for the native amd64 platform.
