@@ -1,0 +1,17 @@
+# Generated build outputs
+project/build/
+project/Obj/
+project/Lst/
+project/bakup/
+
+# Generated makefile and intermediates
+project/Makefile.linux
+project/project.elf
+project/project.hex
+project/project.map
+
+# Packaged firmware artifacts
+project/APP.bin
+project/param.bin
+project/txw8301.bin
+project/txw8301_*.bin

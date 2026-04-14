@@ -207,9 +207,19 @@ def generate_makefile(cdkproj_path):
     # Convert relative lib path to absolute for Wine linker compatibility
     lib_path_abs = lib_path.replace("$(PROJECT_DIR)", "$(PROJECT_DIR_ABS)")
     L(f"LDFLAGS  = $(CPU_FLAGS) -T $(PROJECT_DIR_ABS)/utilities/gcc_csky.ld")
-    L(f"LDFLAGS += -L{lib_path_abs} {lib_flags}")
+    # Static vendor archives have cross-dependencies; group them so linker can
+    # resolve symbols regardless of left-to-right archive order.
+    L(f"LDFLAGS += -L{lib_path_abs} -Wl,--start-group {lib_flags} -Wl,--end-group")
     L(f"LDFLAGS += {ld_gc_flag} {ld_other}".rstrip())
     L("")
+    # ── Per-file object rules ─────────────────────────────────────────────
+    L("# ── Object files ────────────────────────────────────────────────────────")
+    L("OBJS = \\")
+    for i, (obj, _, _) in enumerate(obj_entries):
+        trail = " \\" if i < len(obj_entries) - 1 else ""
+        L(f"    {obj}{trail}")
+    L("")
+
     L("# ── Targets ─────────────────────────────────────────────────────────────")
     L("TARGET = $(OBJ_DIR)/txw4002a.elf")
     L("HEX    = $(OBJ_DIR)/txw4002a.ihex")
@@ -230,14 +240,6 @@ def generate_makefile(cdkproj_path):
     L("")
     L("clean:")
     L("\trm -rf $(OBJ_DIR) $(LST_DIR)")
-    L("")
-
-    # ── Per-file object rules ─────────────────────────────────────────────
-    L("# ── Object files ────────────────────────────────────────────────────────")
-    L("OBJS = \\")
-    for i, (obj, _, _) in enumerate(obj_entries):
-        trail = " \\" if i < len(obj_entries) - 1 else ""
-        L(f"    {obj}{trail}")
     L("")
 
     for obj, src, is_asm in obj_entries:

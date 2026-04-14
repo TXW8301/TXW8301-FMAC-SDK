@@ -3,6 +3,9 @@ set -euo pipefail
 
 PROJECT_ROOT=${PROJECT_ROOT:-/work/fmac}
 PROJECT_DIR=${PROJECT_DIR:-"${PROJECT_ROOT}/project"}
+BUILD_ROOT=${BUILD_ROOT:-"${PROJECT_DIR}/build"}
+BUILD_STAMP=${BUILD_STAMP:-$(date +%Y%m%d_%H%M)}
+BUILD_DIR="${BUILD_ROOT}/${BUILD_STAMP}"
 # CSKY_BIN_DIR can still override the toolchain wrappers installed in the image
 CSKY_BIN_DIR=${CSKY_BIN_DIR:-}
 CSKY_PREFIX=${CSKY_PREFIX:-csky-elfabiv2-}
@@ -30,6 +33,28 @@ check_project_layout() {
     [[ -f "${PROJECT_DIR}/txw4002a.cdkproj" ]] || fail "missing txw4002a.cdkproj"
     [[ -f "${PROJECT_DIR}/BinScript.exe" ]] || fail "missing BinScript.exe"
     [[ -f "${PROJECT_DIR}/makecode.exe" ]] || fail "missing makecode.exe"
+}
+
+clean_previous_artifacts() {
+    cd "${PROJECT_DIR}"
+
+    log "cleaning previous build artifacts"
+    rm -rf "${BUILD_ROOT}"
+    rm -rf ./Obj ./Lst ./bakup
+    rm -f ./Makefile.linux
+    rm -f ./project.elf ./project.hex ./project.map
+    rm -f ./APP.bin ./txw8301.bin ./param.bin
+
+    shopt -s nullglob
+    for f in ./txw8301_*.bin; do
+        rm -f "${f}"
+    done
+    shopt -u nullglob
+}
+
+prepare_build_dir() {
+    mkdir -p "${BUILD_DIR}"
+    log "artifact directory: ${BUILD_DIR}"
 }
 
 generate_makefile() {
@@ -88,6 +113,39 @@ run_packaging_stage() {
     log "packaging stage complete"
 }
 
+stage_build_artifacts() {
+    cd "${PROJECT_DIR}"
+
+    # Keep Obj/Lst for debugging, but move top-level generated artifacts into
+    # build/YYYYMMDD_HHMM to keep project root clean.
+    if [[ -f ./project.elf ]]; then
+        mv -f ./project.elf "${BUILD_DIR}/project.elf"
+    else
+        cp -f ./Obj/txw4002a.elf "${BUILD_DIR}/project.elf"
+    fi
+
+    if [[ -f ./project.hex ]]; then
+        mv -f ./project.hex "${BUILD_DIR}/project.hex"
+    else
+        cp -f ./Obj/txw4002a.ihex "${BUILD_DIR}/project.hex"
+    fi
+
+    if [[ -f ./project.map ]]; then
+        mv -f ./project.map "${BUILD_DIR}/project.map"
+    elif [[ -f ./Lst/txw4002a.map ]]; then
+        cp -f ./Lst/txw4002a.map "${BUILD_DIR}/project.map"
+    fi
+
+    shopt -s nullglob
+    for f in ./txw8301.bin ./param.bin ./APP.bin ./txw8301_*.bin; do
+        [[ -f "${f}" ]] && mv -f "${f}" "${BUILD_DIR}/"
+    done
+    shopt -u nullglob
+
+    [[ -f "${BUILD_DIR}/txw8301.bin" ]] || fail "staged artifacts missing txw8301.bin"
+    log "artifacts staged in ${BUILD_DIR}"
+}
+
 start_display() {
     # Wine requires an X display even for CLI compiler tools.
     # Start a minimal virtual framebuffer if DISPLAY is not already set.
@@ -119,9 +177,12 @@ main() {
     setup_toolchain_path
     check_toolchain
     check_project_layout
+    clean_previous_artifacts
+    prepare_build_dir
     generate_makefile
     run_compile_stage
     run_packaging_stage
+    stage_build_artifacts
     log "build pipeline finished"
 }
 
