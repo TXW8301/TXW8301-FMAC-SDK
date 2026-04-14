@@ -2,7 +2,7 @@
 
 ## Scope
 
-Repository: `SDK/TX_AH_SDK_2.4/FMAC/<FMAC_REPO_DIR>`
+Repository: https://github.com/TXW8301/TXW8301-FMAC-SDK
 
 Goal: run the vendor FMAC firmware build entirely in Docker, including Windows CDK toolchain usage and vendor packaging tools.
 
