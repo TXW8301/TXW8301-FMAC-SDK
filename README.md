@@ -51,6 +51,34 @@ Apple Silicon (M1/M2) note: On Apple Silicon (aarch64/arm64) hosts the runner wi
 
 Note: the script includes a default FTP URL and an example credential pair for convenience. Do NOT commit private credentials into the repository; prefer passing credentials via environment variables or a secrets manager.
 
+## Quickstart
+
+- **Prereqs**: `Docker` (on Apple Silicon enable Buildx/QEMU) and `git`.
+- **Bootstrap (example)**:
+
+```bash
+CDK_AUTO_FETCH=1 \
+CDK_FTP_URL='ftp://183.47.14.74/upload/cdk-windows-V2.8.8-20210621-1740.zip' \
+CDK_FTP_USER='txguest' \
+CDK_FTP_PASS='txguest' \
+CDK_SHA256='f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d' \
+./docker/run-fmac-docker.sh
+```
+
+- **Build (full)**:
+
+```bash
+./docker/run-fmac-docker.sh
+```
+
+- **Compile-only**:
+
+```bash
+SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
+```
+
+- **Apple Silicon note**: enable Docker Buildx and QEMU emulation; the runner will build an `linux/amd64` image on arm64 hosts (first run may be slower).
+
 ### Run
 
 ```bash
