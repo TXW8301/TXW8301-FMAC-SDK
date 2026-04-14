@@ -16,7 +16,7 @@ Implemented and verified:
 - Makefile is generated from `project/txw4002a.cdkproj`
 - Full compile/link succeeds
 - Packaging (`BinScript.exe` + `makecode.exe`) succeeds
-- Artifacts are staged under `project/build/YYYYMMDD_HHMM`
+- Artifacts are staged under `project/build/YYYYMMDD-HHMM`
 
 ## Architecture
 
@@ -54,7 +54,7 @@ Implemented and verified:
 - Generates Makefile
 - Builds firmware (compile + link)
 - Runs packaging tools under Wine
-- Stages outputs to `project/build/YYYYMMDD_HHMM`
+	- Stages outputs to `project/build/YYYYMMDD-HHMM`
 
 `docker/run-fmac-docker.sh`
 
@@ -66,7 +66,7 @@ Implemented and verified:
 
 Per-run output folder:
 
-- `project/build/YYYYMMDD_HHMM/`
+- `project/build/YYYYMMDD-HHMM/`
 
 Typical staged files:
 
@@ -80,8 +80,7 @@ Typical staged files:
 
 Cleanup behavior before each run:
 
-- Removes prior generated content including old `project/build`, `Obj`, `Lst`, `bakup`, and top-level generated firmware/intermediate files
-- Keeps project source files and vendor project inputs unchanged
+- Previous generated artifacts are preserved; build outputs are left in their timestamped folders under `project/build/`.
 
 ## Git Ignore Policy
 

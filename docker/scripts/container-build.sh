@@ -4,7 +4,8 @@ set -euo pipefail
 PROJECT_ROOT=${PROJECT_ROOT:-/work/fmac}
 PROJECT_DIR=${PROJECT_DIR:-"${PROJECT_ROOT}/project"}
 BUILD_ROOT=${BUILD_ROOT:-"${PROJECT_DIR}/build"}
-BUILD_STAMP=${BUILD_STAMP:-$(date +%Y%m%d_%H%M)}
+# Use hyphen-separated timestamp to match repository convention (YYYYMMDD-HHMM)
+BUILD_STAMP=${BUILD_STAMP:-$(date +%Y%m%d-%H%M)}
 BUILD_DIR="${BUILD_ROOT}/${BUILD_STAMP}"
 # CSKY_BIN_DIR can still override the toolchain wrappers installed in the image
 CSKY_BIN_DIR=${CSKY_BIN_DIR:-}
@@ -37,19 +38,9 @@ check_project_layout() {
 
 clean_previous_artifacts() {
     cd "${PROJECT_DIR}"
-
-    log "cleaning previous build artifacts"
-    rm -rf "${BUILD_ROOT}"
-    rm -rf ./Obj ./Lst ./bakup
-    rm -f ./Makefile.linux
-    rm -f ./project.elf ./project.hex ./project.map
-    rm -f ./APP.bin ./txw8301.bin ./param.bin
-
-    shopt -s nullglob
-    for f in ./txw8301_*.bin; do
-        rm -f "${f}"
-    done
-    shopt -u nullglob
+    log "preserving previous generated artifacts; build outputs are kept under ${BUILD_ROOT}"
+    # Intentionally left blank: do not remove prior outputs. Artifacts are timestamped
+    # into ${BUILD_ROOT}/${BUILD_STAMP} so previous runs remain available for debug.
 }
 
 prepare_build_dir() {
@@ -117,7 +108,7 @@ stage_build_artifacts() {
     cd "${PROJECT_DIR}"
 
     # Keep Obj/Lst for debugging, but move top-level generated artifacts into
-    # build/YYYYMMDD_HHMM to keep project root clean.
+    # build/YYYYMMDD-HHMM to keep project root clean.
     if [[ -f ./project.elf ]]; then
         mv -f ./project.elf "${BUILD_DIR}/project.elf"
     else

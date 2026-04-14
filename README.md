@@ -25,8 +25,7 @@ Caveats:
 - CDK V2.8.8 extraction with `unshield` and install into Wine prefix
 - Auto-generated GNU Makefile from `project/txw4002a.cdkproj`
 - Compile, link, and packaging stages running in container
-- Build artifact staging under `project/build/YYYYMMDD_HHMM`
-- Automatic cleanup of previous generated artifacts before each run
+- Build artifact staging under `project/build/YYYYMMDD-HHMM`
 
 ### Key Files
 
@@ -80,7 +79,7 @@ CDK_DIR=/abs/path/to/cdk-windows-V2.8.8-20210621-1740 ./docker/run-fmac-docker.s
 
 Each run creates a timestamped output folder:
 
-- `project/build/YYYYMMDD_HHMM/`
+- `project/build/YYYYMMDD-HHMM/`
 
 Typical files in that folder:
 
@@ -92,7 +91,7 @@ Typical files in that folder:
 - `APP.bin` (when generated)
 - `txw8301_v2.4.1.5-40938_*.bin`
 
-The script removes previous generated artifacts before each run while keeping source/project files intact.
+Generated artifacts are preserved in timestamped build folders; source/project files are left intact.
 
 ### Notes
 
