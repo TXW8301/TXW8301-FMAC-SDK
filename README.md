@@ -5,6 +5,20 @@ TX_AH SDK 2.4 FMAC firmware development repository.
 
 This repository includes a fully containerized FMAC firmware build for SDK `v2.4.1.5-40938`, using the vendor Windows CDK under Wine.
 
+## Why use the Docker build
+
+The vendor CDK (C-SKY MinGW toolchain) and the firmware packaging tools are distributed as Windows executables. The Docker image runs the vendor CDK inside a Wine prefix and provides Wine wrapper scripts so the exact Windows toolchain and packaging flow run unchanged on Linux and in CI. This approach was chosen because it:
+
+- Ensures reproducible builds: the same compiler, linker and packaging tools for all developers and CI.
+- Removes the need for a Windows development host: the Windows CDK runs under Wine inside the container.
+- Uses vendor packaging tools unchanged: produces firmware images exactly as the vendor tools expect.
+- Keeps the host clean and portable: CDK and generated artifacts are isolated in the container and staged into timestamped build folders.
+- Is CI-friendly and automatable: supports repeatable releases and the optional CDK auto-bootstrap for first-time setup.
+
+Caveats:
+- You still need the vendor CDK installer (place it under SDK/CDK or use the CDK_AUTO_FETCH option).
+- The build relies on Wine-wrapped toolchain semantics; behavior may differ slightly from native Linux cross-compilers — see DOCKER_BUILD_NOTES for details.
+
 ### What Is Implemented
 
 - Docker image with Wine 32-bit support (`WINEARCH=win32`, `wine32`, `wine64`)
