@@ -133,7 +133,11 @@ stage_build_artifacts() {
     done
     shopt -u nullglob
 
-    [[ -f "${BUILD_DIR}/txw8301.bin" ]] || fail "staged artifacts missing txw8301.bin"
+    if [[ "${SKIP_PACKAGING:-0}" == "1" ]]; then
+        log "SKIP_PACKAGING=1; packaging was skipped, txw8301.bin may be absent"
+    else
+        [[ -f "${BUILD_DIR}/txw8301.bin" ]] || fail "staged artifacts missing txw8301.bin"
+    fi
     log "artifacts staged in ${BUILD_DIR}"
 }
 
