@@ -119,6 +119,12 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Annotate release with build metadata
+        if: always()
+        run: |
+          echo "Release created for ${{ github.ref_name || github.sha }}"
+          echo "Image tag: $IMAGE_TAG"
+
       - name: Upload firmware to release
         uses: actions/upload-release-asset@v1
         env:
