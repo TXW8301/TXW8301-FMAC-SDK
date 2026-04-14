@@ -22,8 +22,25 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
 
-# SDK root = .../SDK  (3 levels up from TXW8301_FMAC-…)
-SDK_ROOT=$(cd "${PROJECT_ROOT}/../../.." && pwd)
+# SDK root detection:
+# Prefer the nearest ancestor directory named 'SDK'. If none found, fall
+# back to the project parent (one level up). This avoids incorrectly
+# resolving to an unrelated filesystem root like `/Users` when the
+# repository is checked out in a different layout.
+find_sdk_root() {
+    local dir="$1"
+    while [[ "$dir" != "/" ]]; do
+        if [[ "$(basename "$dir")" == "SDK" ]]; then
+            printf '%s' "$dir"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    # Fallback: parent of PROJECT_ROOT
+    printf '%s' "$(cd "${PROJECT_ROOT}/.." && pwd)"
+}
+
+SDK_ROOT=$(find_sdk_root "${PROJECT_ROOT}")
 SDK_CDK_ROOT="${SDK_ROOT}/CDK"
 CDK_VERSION_DIR="${CDK_VERSION_DIR:-cdk-windows-V2.8.8-20210621-1740}"
 
