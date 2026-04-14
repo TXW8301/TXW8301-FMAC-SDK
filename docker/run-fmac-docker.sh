@@ -50,11 +50,12 @@ DOCKER_BUILDKIT=1 docker build \
 # ── Run build pipeline ────────────────────────────────────────────────────────
 echo "[run-fmac-docker] starting build container..."
 
+# Mount the entire FMAC dir at /work so relative paths (../libs, ../sdk) resolve
 DOCKER_RUN_ARGS=(
     --rm
-    -v "${PROJECT_ROOT}:/work"
-    -e PROJECT_ROOT=/work
-    -e PROJECT_DIR=/work/project
+    -v "${PROJECT_ROOT}:/work/fmac:z"
+    -e PROJECT_ROOT=/work/fmac
+    -e PROJECT_DIR=/work/fmac/project
     -e "CSKY_PREFIX=${CSKY_PREFIX:-csky-elfabiv2-}"
     -e "SKIP_PACKAGING=${SKIP_PACKAGING:-0}"
 )

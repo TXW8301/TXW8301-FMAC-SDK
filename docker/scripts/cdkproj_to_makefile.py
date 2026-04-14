@@ -185,6 +185,8 @@ def generate_makefile(cdkproj_path):
     L("PROJECT_DIR ?= $(CURDIR)")
     L("OBJ_DIR     ?= $(PROJECT_DIR)/Obj")
     L("LST_DIR     ?= $(PROJECT_DIR)/Lst")
+    L("# Absolute paths for Wine linker (relative paths don't work with Wine ld.exe)")
+    L("PROJECT_DIR_ABS ?= $(shell cd $(PROJECT_DIR) 2>/dev/null && pwd || echo $(PROJECT_DIR))")
     L("")
     L("# ── CPU / ABI flags ─────────────────────────────────────────────────────")
     L(f"CPU_FLAGS = {cpu_flags}")
@@ -202,8 +204,10 @@ def generate_makefile(cdkproj_path):
     L("# ── Linker flags ────────────────────────────────────────────────────────")
     ld_gc_flag = "-Wl,--gc-sections" if ld_gc else ""
     lib_flags  = " ".join(f"-l{l}" for l in libs)
-    L(f"LDFLAGS  = $(CPU_FLAGS) -T {ld_file}")
-    L(f"LDFLAGS += -L{lib_path} {lib_flags}")
+    # Convert relative lib path to absolute for Wine linker compatibility
+    lib_path_abs = lib_path.replace("$(PROJECT_DIR)", "$(PROJECT_DIR_ABS)")
+    L(f"LDFLAGS  = $(CPU_FLAGS) -T $(PROJECT_DIR_ABS)/utilities/gcc_csky.ld")
+    L(f"LDFLAGS += -L{lib_path_abs} {lib_flags}")
     L(f"LDFLAGS += {ld_gc_flag} {ld_other}".rstrip())
     L("")
     L("# ── Targets ─────────────────────────────────────────────────────────────")

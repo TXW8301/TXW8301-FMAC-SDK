@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT=${PROJECT_ROOT:-/work}
+PROJECT_ROOT=${PROJECT_ROOT:-/work/fmac}
 PROJECT_DIR=${PROJECT_DIR:-"${PROJECT_ROOT}/project"}
 # CSKY_BIN_DIR can still override the toolchain wrappers installed in the image
 CSKY_BIN_DIR=${CSKY_BIN_DIR:-}
