@@ -174,11 +174,47 @@ log "project : ${PROJECT_ROOT}"
 # ── Build image ───────────────────────────────────────────────────────────────
 # --build-context cdk-installer injects the CDK directory into the build without
 # making it part of the main build context (keeps context transfer fast).
-DOCKER_BUILDKIT=1 docker build \
-    --build-context "cdk-installer=${CDK_DIR}" \
-    -f "${PROJECT_ROOT}/docker/Dockerfile" \
-    -t "${IMAGE_TAG}" \
-    "${PROJECT_ROOT}"
+# Determine whether the host is Apple Silicon / aarch64 and, if so, build
+# the image for amd64 using buildx and QEMU so i386/wine32 packages are
+# available inside the image. Users can override with DOCKER_BUILD_PLATFORM.
+host_arch=$(uname -m || true)
+if [[ -z "${DOCKER_BUILD_PLATFORM:-}" ]]; then
+    case "${host_arch}" in
+        aarch64|arm64)
+            DOCKER_BUILD_PLATFORM=linux/amd64
+            ;;
+        *)
+            DOCKER_BUILD_PLATFORM=
+            ;;
+    esac
+fi
+
+if [[ -n "${DOCKER_BUILD_PLATFORM}" ]]; then
+    log "building image for platform ${DOCKER_BUILD_PLATFORM} (host: ${host_arch})"
+    # Prefer buildx so we can emulate amd64 on arm64 hosts and then load the
+    # resulting image into the local docker daemon with --load. If buildx
+    # fails, fall back to the plain docker build command.
+    if DOCKER_BUILDKIT=1 docker buildx build --load --platform "${DOCKER_BUILD_PLATFORM}" \
+        --build-context "cdk-installer=${CDK_DIR}" \
+        -f "${PROJECT_ROOT}/docker/Dockerfile" \
+        -t "${IMAGE_TAG}" \
+        "${PROJECT_ROOT}"; then
+        :
+    else
+        warn "docker buildx build failed; falling back to regular docker build"
+        DOCKER_BUILDKIT=1 docker build \
+            --build-context "cdk-installer=${CDK_DIR}" \
+            -f "${PROJECT_ROOT}/docker/Dockerfile" \
+            -t "${IMAGE_TAG}" \
+            "${PROJECT_ROOT}"
+    fi
+else
+    DOCKER_BUILDKIT=1 docker build \
+        --build-context "cdk-installer=${CDK_DIR}" \
+        -f "${PROJECT_ROOT}/docker/Dockerfile" \
+        -t "${IMAGE_TAG}" \
+        "${PROJECT_ROOT}"
+fi
 
 # ── Run build pipeline ────────────────────────────────────────────────────────
 log "starting build container..."
