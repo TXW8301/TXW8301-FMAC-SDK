@@ -64,37 +64,67 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Locate or download CDK (optional)
+      - name: Locate or download CDK (with runner-local zip cache)
         id: cdk
         run: |
           set -euo pipefail
           cd "${{ github.workspace }}"
-          echo "Looking for repo-local CDK under ./cdk/..."
+
+          # 1. Check for repo-local already-extracted CDK
           CDK_DIR=$(ls -d cdk/cdk-windows-* 2>/dev/null | tail -n1 || true)
           if [ -n "$CDK_DIR" ]; then
-            echo "Found CDK at $CDK_DIR"
+            echo "Found repo-local CDK at $CDK_DIR"
             echo "cdk_dir=$CDK_DIR" >> $GITHUB_OUTPUT
             exit 0
           fi
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.cdk_auto_fetch }}" = "1" ]; then
-            echo "Attempting to download CDK from ${{ github.event.inputs.cdk_ftp_url }}"
-            mkdir -p cdk
-            FTP_USER="${{ github.event.inputs.cdk_ftp_user || secrets.CDK_FTP_USER || 'txguest' }}"
-            FTP_PASS="${{ github.event.inputs.cdk_ftp_pass || secrets.CDK_FTP_PASS || 'txguest' }}"
-            curl -u "${FTP_USER}:${FTP_PASS}" -L -o cdk/cdk.zip "${{ github.event.inputs.cdk_ftp_url }}"
-            unzip -q cdk/cdk.zip -d cdk
-            CDK_DIR=$(ls -d cdk/cdk-windows-* 2>/dev/null | tail -n1 || true)
-            if [ -n "$CDK_DIR" ]; then
-              echo "cdk_dir=$CDK_DIR" >> $GITHUB_OUTPUT
-              exit 0
+
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ github.event.inputs.cdk_auto_fetch }}" != "1" ]; then
+            echo "No CDK found and auto-fetch not requested; provide CDK in ./cdk or run with cdk_auto_fetch=1" >&2
+            echo "cdk_dir=" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # 2. Persistent runner-local CDK zip cache — avoids FTP download on every run
+          CDK_CACHE_DIR="$HOME/.cache/txw8301-cdk"
+          CDK_CACHE_ZIP="${CDK_CACHE_DIR}/cdk.zip"
+          CDK_EXPECTED_SHA="${{ github.event.inputs.cdk_sha256 }}"
+          mkdir -p cdk "$CDK_CACHE_DIR"
+
+          USE_CACHE=0
+          if [ -f "$CDK_CACHE_ZIP" ]; then
+            echo "Found cached CDK zip at $CDK_CACHE_ZIP"
+            if [ -n "$CDK_EXPECTED_SHA" ]; then
+              ACTUAL=$(sha256sum "$CDK_CACHE_ZIP" | awk '{print $1}')
+              if [ "$ACTUAL" = "$CDK_EXPECTED_SHA" ]; then
+                echo "SHA256 verified — using cached CDK zip (skip FTP download)"
+                USE_CACHE=1
+              else
+                echo "SHA256 mismatch (expected=$CDK_EXPECTED_SHA actual=$ACTUAL) — re-downloading"
+              fi
+            else
+              echo "No SHA256 provided — using cached CDK zip without verification"
+              USE_CACHE=1
             fi
+          fi
+
+          if [ "$USE_CACHE" = "0" ]; then
+            FTP_USER="${{ github.event.inputs.cdk_ftp_user }}"
+            FTP_PASS="${{ github.event.inputs.cdk_ftp_pass }}"
+            echo "Downloading CDK from ${{ github.event.inputs.cdk_ftp_url }}"
+            curl -u "${FTP_USER}:${FTP_PASS}" -L -o "$CDK_CACHE_ZIP" "${{ github.event.inputs.cdk_ftp_url }}"
+            echo "Saved CDK to runner cache: $CDK_CACHE_ZIP"
+          fi
+
+          echo "Extracting CDK..."
+          unzip -q "$CDK_CACHE_ZIP" -d cdk
+          CDK_DIR=$(ls -d cdk/cdk-windows-* 2>/dev/null | tail -n1 || true)
+          if [ -n "$CDK_DIR" ]; then
+            echo "cdk_dir=$CDK_DIR" >> $GITHUB_OUTPUT
+          else
             echo "cdk_dir=" >> $GITHUB_OUTPUT
             echo "Failed to extract CDK" >&2
             exit 1
           fi
-          echo "No CDK found and auto-fetch not requested; provide CDK in ./cdk or run workflow with cdk_auto_fetch=1" >&2
-          echo "cdk_dir=" >> $GITHUB_OUTPUT
-          exit 1
 
       - name: Build Docker image (with CDK if available)
         env:
@@ -102,14 +132,36 @@ jobs:
         run: |
           set -euo pipefail
           cd "${{ github.workspace }}"
-          docker buildx create --use || true
+
+          # Persistent buildx layer cache on the runner disk — makes subsequent builds incremental
+          BUILDX_CACHE="$HOME/.cache/txw8301-buildx-cache"
+          BUILDX_CACHE_NEW="${BUILDX_CACHE}-new"
+          mkdir -p "$BUILDX_CACHE"
+
+          # Reuse a named builder if it exists; create one otherwise
+          docker buildx use txw8301-builder 2>/dev/null || \
+            docker buildx create --use --driver docker-container --name txw8301-builder || true
+
+          BUILD_ARGS=(
+            --load
+            --platform linux/amd64
+            --cache-from "type=local,src=${BUILDX_CACHE}"
+            --cache-to "type=local,dest=${BUILDX_CACHE_NEW},mode=max"
+            -f docker/Dockerfile
+            -t "${IMAGE_TAG}"
+          )
+
           if [ -n "${{ steps.cdk.outputs.cdk_dir }}" ]; then
             echo "Building image with CDK from: ${{ steps.cdk.outputs.cdk_dir }}"
-            docker buildx build --load --platform linux/amd64 --build-context "cdk-installer=${{ steps.cdk.outputs.cdk_dir }}" -f docker/Dockerfile -t "${IMAGE_TAG}" "${{ github.workspace }}"
+            docker buildx build "${BUILD_ARGS[@]}" --build-context "cdk-installer=${{ steps.cdk.outputs.cdk_dir }}" "${{ github.workspace }}"
           else
             echo "Building image without CDK build-context (CDK must be embedded or provided)" >&2
-            docker buildx build --load --platform linux/amd64 -f docker/Dockerfile -t "${IMAGE_TAG}" "${{ github.workspace }}"
+            docker buildx build "${BUILD_ARGS[@]}" "${{ github.workspace }}"
           fi
+
+          # Rotate cache directory (avoids unbounded disk growth)
+          rm -rf "$BUILDX_CACHE"
+          mv "$BUILDX_CACHE_NEW" "$BUILDX_CACHE"
 
       - name: Run container build pipeline
         env:
