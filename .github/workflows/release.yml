@@ -31,6 +31,9 @@ on:
         required: false
         default: 'TXW8301_FMAC-v2.4.1.5-40938'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 permissions:
   contents: write
 
@@ -117,7 +120,7 @@ jobs:
           fi
           echo "artifact_path=$ART" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub release and upload firmware
+      - name: Create or update GitHub release and upload firmware
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -126,23 +129,46 @@ jobs:
           sudo apt-get install -y jq
 
           TAG="${{ github.event.inputs.release_tag || github.ref_name || github.sha }}"
-          echo "Creating release for $TAG"
-          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases"
+          echo "Using release tag: $TAG"
+          API_BASE="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          RELEASES_API="${API_BASE}/releases"
+          GET_BY_TAG="${RELEASES_API}/tags/${TAG}"
 
-          # Create release
-          BODY=$(jq -n --arg tag "$TAG" --arg body "Automated build for $TAG" '{tag_name:$tag, name:$tag, body:$body, draft:false, prerelease:false}')
-          RESP=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" -H "Content-Type: application/json" -d "$BODY" "$API")
-
-          UPLOAD_URL=$(echo "$RESP" | jq -r .upload_url)
-          if [ -z "$UPLOAD_URL" ] || [ "$UPLOAD_URL" = "null" ]; then
-            echo "Failed to create release: $RESP" >&2
-            exit 1
+          echo "Checking for existing release..."
+          GET_RESP=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" "$GET_BY_TAG")
+          RELEASE_ID=$(echo "$GET_RESP" | jq -r '.id // empty')
+          if [ -n "$RELEASE_ID" ]; then
+            echo "Found existing release id=$RELEASE_ID"
+            UPLOAD_URL=$(echo "$GET_RESP" | jq -r '.upload_url')
+            HTML_URL=$(echo "$GET_RESP" | jq -r '.html_url')
+          else
+            echo "No existing release; creating new release for $TAG"
+            BODY=$(jq -n --arg tag "$TAG" --arg body "Automated build for $TAG" '{tag_name:$tag, name:$tag, body:$body, draft:false, prerelease:false}')
+            CREATE_RESP=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" -H "Content-Type: application/json" -d "$BODY" "${RELEASES_API}")
+            RELEASE_ID=$(echo "$CREATE_RESP" | jq -r '.id // empty')
+            if [ -z "$RELEASE_ID" ]; then
+              echo "Failed to create release: $CREATE_RESP" >&2
+              exit 1
+            fi
+            UPLOAD_URL=$(echo "$CREATE_RESP" | jq -r '.upload_url')
+            HTML_URL=$(echo "$CREATE_RESP" | jq -r '.html_url')
           fi
-          RELEASE_HTML_URL=$(echo "$RESP" | jq -r .html_url)
           UPLOAD_URL=${UPLOAD_URL%\{*}
 
           ART="${{ steps.find_artifact.outputs.artifact_path }}"
-          echo "Uploading $ART to $UPLOAD_URL"
-          UPLOAD_RESP=$(curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Content-Type: application/octet-stream" --data-binary @"$ART" "$UPLOAD_URL?name=txw8301.bin")
-          echo "Release created: $RELEASE_HTML_URL"
+          ASSET_NAME=$(basename "$ART")
+          echo "Preparing to upload $ART as $ASSET_NAME to release $RELEASE_ID ($HTML_URL)"
+
+          # Remove existing asset with same name if present
+          ASSETS_API="${RELEASES_API}/${RELEASE_ID}/assets"
+          EXISTING_ASSET_ID=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" "$ASSETS_API" | jq -r --arg name "$ASSET_NAME" '.[] | select(.name==$name) | .id' | head -n1 || true)
+          if [ -n "$EXISTING_ASSET_ID" ]; then
+            echo "Deleting existing asset id=$EXISTING_ASSET_ID"
+            curl -s -X DELETE -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" "${API_BASE}/releases/assets/${EXISTING_ASSET_ID}"
+          fi
+
+          echo "Uploading $ASSET_NAME..."
+          UPLOAD_RESP=$(curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Content-Type: application/octet-stream" --data-binary @"$ART" "${UPLOAD_URL}?name=${ASSET_NAME}")
+          echo "Upload response:"
           echo "$UPLOAD_RESP" | jq -r '.' || true
+          echo "Release URL: $HTML_URL"
