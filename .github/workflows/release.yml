@@ -125,8 +125,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          sudo apt-get update -y
-          sudo apt-get install -y jq
+          # jq must be pre-installed on the self-hosted runner (see README / runner setup)
+          command -v jq >/dev/null 2>&1 || { echo "jq not found; run: sudo apt-get install -y jq on the runner machine" >&2; exit 1; }
 
           TAG="${{ github.event.inputs.release_tag || github.ref_name || github.sha }}"
           echo "Using release tag: $TAG"
