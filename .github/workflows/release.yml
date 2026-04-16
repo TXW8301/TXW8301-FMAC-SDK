@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, n305-ubuntu]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
