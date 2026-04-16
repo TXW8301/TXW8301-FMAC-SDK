@@ -43,13 +43,14 @@ jobs:
     steps:
       - name: Clean root-owned build artifacts from previous run
         run: |
-          # Docker containers run as root, leaving root-owned files that the runner
-          # user cannot delete. Use Docker to clean them before checkout.
+          # Docker containers run as root, leaving root-owned files that the
+          # runner user cannot delete. Use Docker to wipe the whole workspace
+          # so actions/checkout always starts clean.
           if [ -d "${{ github.workspace }}" ]; then
             docker run --rm \
               -v "${{ github.workspace }}:/ws" \
               alpine:latest \
-              sh -c "rm -rf /ws/project/build /ws/project/Lst /ws/project/Obj /ws/cdk" || true
+              sh -c "find /ws -mindepth 1 -delete" || true
           fi
 
       - name: Checkout repository
