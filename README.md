@@ -3,7 +3,7 @@ TX_AH SDK 2.4 FMAC firmware development repository.
 
 ## Docker Build (TXW8301-14)
 
-This repository includes a fully containerized FMAC firmware build for SDK `v2.4.1.5-40938`, using the vendor Windows CDK under Wine.
+This repository includes a fully containerized FMAC firmware build for the TX_AH 2.4 SDK, using the vendor Windows CDK under Wine. The vendor baseline is tracked via git tags (e.g. `vendor-v2.4.1.5-42011`); the directory name is stable and version-independent.
 
 ## Why use the Docker build
 
@@ -33,7 +33,8 @@ Caveats:
 - `docker/scripts/install-cdk.sh`: CDK extraction and wrapper setup
 - `docker/scripts/cdkproj_to_makefile.py`: CDK project -> Makefile generator
 - `docker/scripts/container-build.sh`: in-container build orchestration
-- `docker/run-fmac-docker.sh`: host-side wrapper
+- `docker/build-fmac-image.sh`: host-side wrapper (builds Docker image, bootstraps CDK)
+- `build_fmac_firmware.sh`: top-level bus-select build wrapper — patches `project_config.h` in-memory and invokes Docker for the chosen interface (`-sdio`, `-usb`, `-uart`)
 
 ### Prerequisites
 
@@ -62,19 +63,19 @@ CDK_FTP_URL='ftp://183.47.14.74/upload/cdk-windows-V2.8.8-20210621-1740.zip' \
 CDK_FTP_USER='txguest' \
 CDK_FTP_PASS='txguest' \
 CDK_SHA256='f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d' \
-./docker/run-fmac-docker.sh
+./docker/build-fmac-image.sh
 ```
 
 - **Build (full)**:
 
 ```bash
-./docker/run-fmac-docker.sh
+./docker/build-fmac-image.sh
 ```
 
 - **Compile-only**:
 
 ```bash
-SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
+SKIP_PACKAGING=1 ./docker/build-fmac-image.sh
 ```
 
 - **Apple Silicon note**: enable Docker Buildx and QEMU emulation; the runner will build an `linux/amd64` image on arm64 hosts (first run may be slower).
@@ -82,15 +83,22 @@ SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
 ### Run
 
 ```bash
-# Change into the FMAC repository directory (example)
-cd SDK/TX_AH_SDK_2.4/FMAC/<FMAC_REPO_DIR>
-./docker/run-fmac-docker.sh
+cd SDK/TX_AH_SDK_2.4/FMAC/TXW8301_FMAC
+./docker/build-fmac-image.sh
+```
+
+Bus-interface build (recommended — selects SDIO, USB, or UART without modifying source):
+
+```bash
+./build_fmac_firmware.sh -sdio
+./build_fmac_firmware.sh -usb
+./build_fmac_firmware.sh -uart
 ```
 
 Compile only (skip vendor packaging):
 
 ```bash
-SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
+SKIP_PACKAGING=1 ./docker/build-fmac-image.sh
 ```
 
 First-time bootstrap from FTP (example):
@@ -101,13 +109,13 @@ CDK_FTP_URL='ftp://183.47.14.74/upload/cdk-windows-V2.8.8-20210621-1740.zip' \
 CDK_FTP_USER='txguest' \
 CDK_FTP_PASS='txguest' \
 CDK_SHA256='f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783130f18993d' \
-./docker/run-fmac-docker.sh
+./docker/build-fmac-image.sh
 ```
 
 Explicit path override:
 
 ```bash
-CDK_DIR=/abs/path/to/cdk-windows-V2.8.8-20210621-1740 ./docker/run-fmac-docker.sh
+CDK_DIR=/abs/path/to/cdk-windows-V2.8.8-20210621-1740 ./docker/build-fmac-image.sh
 ```
 
 ### Build Outputs
@@ -124,7 +132,10 @@ Typical files in that folder:
 - `txw8301.bin`
 - `param.bin` (when generated)
 - `APP.bin` (when generated)
-- `txw8301_v2.4.1.5-40938_*.bin`
+
+When using `build_fmac_firmware.sh`, the binary is renamed with a bus-mode suffix:
+
+- `txw8301_vX.Y.Z-BBBBB_<date>_<mode>.bin` (e.g. `txw8301_v2.4.1.5-42011_2026.4.28_usb.bin`)
 
 Generated artifacts are preserved in timestamped build folders; source/project files are left intact.
 
@@ -149,8 +160,8 @@ The workflow file is at `.github/workflows/release.yml`. It builds the Docker im
 ### Trigger via git tag (recommended for formal releases)
 
 ```bash
-git tag -a TXW8301_FMAC-v2.4.1.5-40938 -m "Release TXW8301_FMAC-v2.4.1.5-40938"
-git push origin TXW8301_FMAC-v2.4.1.5-40938
+git tag -a TXW8301_FMAC-vX.Y.Z-BBBBB -m "Release TXW8301_FMAC-vX.Y.Z-BBBBB"
+git push origin TXW8301_FMAC-vX.Y.Z-BBBBB
 ```
 
 > Note: the tag-triggered path requires `./cdk/` to be present in the repo (CDK is not auto-fetched on tag push). If CDK is not committed, use the manual dispatch path below instead.
@@ -166,7 +177,7 @@ gh workflow run release.yml -f cdk_auto_fetch=1
 # Explicit — override the release tag
 gh workflow run release.yml \
   -f cdk_auto_fetch=1 \
-  -f release_tag=TXW8301_FMAC-v2.4.1.5-40938
+  -f release_tag=TXW8301_FMAC-vX.Y.Z-BBBBB
 ```
 
 **GitHub web UI:**
@@ -213,6 +224,6 @@ gh run delete <RUN_ID>
 | `cdk_ftp_user` | `txguest` | FTP username (public vendor credential) |
 | `cdk_ftp_pass` | `txguest` | FTP password (public vendor credential) |
 | `cdk_sha256` | known hash | SHA256 of CDK zip for integrity verification |
-| `release_tag` | `TXW8301_FMAC-v2.4.1.5-40938` | Tag and name used for the GitHub Release |
+| `release_tag` | `TXW8301_FMAC-vX.Y.Z-BBBBB` | Tag and name used for the GitHub Release (match the vendor build tag) |
 
 Credentials can also be set as GitHub repository secrets (`CDK_FTP_USER`, `CDK_FTP_PASS`) to override the defaults without editing the workflow file.

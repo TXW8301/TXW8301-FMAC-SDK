@@ -56,7 +56,7 @@ Implemented and verified:
 - Runs packaging tools under Wine
 	- Stages outputs to `project/build/YYYYMMDD-HHMM`
 
-`docker/run-fmac-docker.sh`
+`docker/build-fmac-image.sh`
 
 - Builds Docker image with CDK build context
 - Runs container with project mounted
@@ -101,7 +101,7 @@ Run full build:
 ```bash
 # Change into the FMAC repository directory (example)
 cd SDK/TX_AH_SDK_2.4/FMAC/<FMAC_REPO_DIR>
-./docker/run-fmac-docker.sh
+./docker/build-fmac-image.sh
 ```
 
 First-time bootstrap (no pre-extracted CDK directory):
@@ -110,19 +110,19 @@ First-time bootstrap (no pre-extracted CDK directory):
 CDK_AUTO_FETCH=1 \
 CDK_FTP_URL='ftp://<user>:<pass>@<host>/<path>/cdk-windows-V2.8.8-20210621-1740.zip' \
 CDK_SHA256='<optional_sha256>' \
-./docker/run-fmac-docker.sh
+./docker/build-fmac-image.sh
 ```
 
 Explicit path override:
 
 ```bash
-CDK_DIR=/abs/path/to/cdk-windows-V2.8.8-20210621-1740 ./docker/run-fmac-docker.sh
+CDK_DIR=/abs/path/to/cdk-windows-V2.8.8-20210621-1740 ./docker/build-fmac-image.sh
 ```
 
 Compile-only (skip packaging):
 
 ```bash
-SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh
+SKIP_PACKAGING=1 ./docker/build-fmac-image.sh
 ```
 
 ## Known Notes
@@ -166,7 +166,7 @@ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 	- Force amd64 image build explicitly:
 
 ```bash
-DOCKER_BUILD_PLATFORM=linux/amd64 ./docker/run-fmac-docker.sh
+DOCKER_BUILD_PLATFORM=linux/amd64 ./docker/build-fmac-image.sh
 ```
 
 	- On Intel (x86_64) Macs no special action is required; the image will be built for the native amd64 platform.

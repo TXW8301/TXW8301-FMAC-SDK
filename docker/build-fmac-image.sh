@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run-fmac-docker.sh — build the Docker image (with CDK toolchain via Wine)
+# build-fmac-image.sh — build the Docker image (with CDK toolchain via Wine)
 # and run the containerised FMAC firmware build pipeline.
 #
 # Requirements:
@@ -11,13 +11,13 @@
 #       CDK_AUTO_FETCH=1 + CDK_FTP_URL can download/extract CDK automatically
 #
 # Usage:
-#   ./docker/run-fmac-docker.sh
-#   SKIP_PACKAGING=1 ./docker/run-fmac-docker.sh   # compile only
+#   ./docker/build-fmac-image.sh
+#   SKIP_PACKAGING=1 ./docker/build-fmac-image.sh   # compile only
 #
 # Auto-fetch example:
 #   CDK_AUTO_FETCH=1 \
 #   CDK_FTP_URL='ftp://user:pass@example.com/path/cdk-windows-V2.8.8-20210621-1740.zip' \
-#   ./docker/run-fmac-docker.sh
+#   ./docker/build-fmac-image.sh
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -53,9 +53,9 @@ CDK_SHA256="${CDK_SHA256:-f3b19310c21bfb9597d9ff22f71284bbb880841355a370ba726783
 
 IMAGE_TAG=${IMAGE_TAG:-txw8301-fmac-sdk:2.4.1.5-40938}
 
-log() { printf '[run-fmac-docker] %s\n' "$*"; }
-warn() { printf '[run-fmac-docker] WARNING: %s\n' "$*"; }
-fail() { printf '[run-fmac-docker] ERROR: %s\n' "$*" >&2; exit 1; }
+log() { printf '[build-fmac-image] %s\n' "$*"; }
+warn() { printf '[build-fmac-image] WARNING: %s\n' "$*"; }
+fail() { printf '[build-fmac-image] ERROR: %s\n' "$*" >&2; exit 1; }
 
 download_file() {
     local url="$1"
@@ -71,22 +71,22 @@ download_file() {
             curl_auth=(--user "${CDK_FTP_USER}:${CDK_FTP_PASS}")
         fi
         if ! curl -fL --retry 3 --retry-delay 2 "${curl_auth[@]}" -o "${tmp}" "${url}"; then
-            echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
-            echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
+            echo "[build-fmac-image] ERROR: download failed: ${url}" >&2
+            echo "[build-fmac-image] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
             return 1
         fi
     elif command -v wget >/dev/null 2>&1; then
         # Pass FTP credentials to wget when provided
         if [[ -n "${CDK_FTP_USER:-}" ]]; then
             if ! wget --ftp-user="${CDK_FTP_USER}" --ftp-password="${CDK_FTP_PASS}" -O "${tmp}" "${url}"; then
-                echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
-                echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
+                echo "[build-fmac-image] ERROR: download failed: ${url}" >&2
+                echo "[build-fmac-image] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
                 return 1
             fi
         else
             if ! wget -O "${tmp}" "${url}"; then
-                echo "[run-fmac-docker] ERROR: download failed: ${url}" >&2
-                echo "[run-fmac-docker] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
+                echo "[build-fmac-image] ERROR: download failed: ${url}" >&2
+                echo "[build-fmac-image] Please request the CDK from https://ol.taixin-semi.com or provide a local copy via CDK_DIR." >&2
                 return 1
             fi
         fi
@@ -196,6 +196,7 @@ if [[ -n "${DOCKER_BUILD_PLATFORM}" ]]; then
     # fails, fall back to the plain docker build command.
     if DOCKER_BUILDKIT=1 docker buildx build --load --platform "${DOCKER_BUILD_PLATFORM}" \
         --build-context "cdk-installer=${CDK_DIR}" \
+        --build-arg "BUILD_UID=$(id -u)" --build-arg "BUILD_GID=$(id -g)" \
         -f "${PROJECT_ROOT}/docker/Dockerfile" \
         -t "${IMAGE_TAG}" \
         "${PROJECT_ROOT}"; then
@@ -204,6 +205,7 @@ if [[ -n "${DOCKER_BUILD_PLATFORM}" ]]; then
         warn "docker buildx build failed; falling back to regular docker build"
         DOCKER_BUILDKIT=1 docker build \
             --build-context "cdk-installer=${CDK_DIR}" \
+            --build-arg "BUILD_UID=$(id -u)" --build-arg "BUILD_GID=$(id -g)" \
             -f "${PROJECT_ROOT}/docker/Dockerfile" \
             -t "${IMAGE_TAG}" \
             "${PROJECT_ROOT}"
@@ -211,6 +213,7 @@ if [[ -n "${DOCKER_BUILD_PLATFORM}" ]]; then
 else
     DOCKER_BUILDKIT=1 docker build \
         --build-context "cdk-installer=${CDK_DIR}" \
+        --build-arg "BUILD_UID=$(id -u)" --build-arg "BUILD_GID=$(id -g)" \
         -f "${PROJECT_ROOT}/docker/Dockerfile" \
         -t "${IMAGE_TAG}" \
         "${PROJECT_ROOT}"
@@ -222,6 +225,7 @@ log "starting build container..."
 # Mount the entire FMAC dir at /work so relative paths (../libs, ../sdk) resolve
 DOCKER_RUN_ARGS=(
     --rm
+    --user "$(id -u):$(id -g)"
     -v "${PROJECT_ROOT}:/work/fmac:z"
     -e PROJECT_ROOT=/work/fmac
     -e PROJECT_DIR=/work/fmac/project

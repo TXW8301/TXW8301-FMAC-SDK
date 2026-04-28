@@ -116,4 +116,7 @@ fi
 
 kill "${XVFB_PID}" 2>/dev/null || true
 wineserver -k 2>/dev/null || true
+# Remove root-owned Wine socket dirs so they are not baked into the image
+# layer; the builder user needs to create its own socket dir at run time.
+rm -rf /tmp/.wine-* /tmp/wine-* 2>/dev/null || true
 log "CDK toolchain setup complete — wrappers in /usr/local/bin"
