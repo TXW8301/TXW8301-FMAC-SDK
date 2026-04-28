@@ -227,3 +227,16 @@ gh run delete <RUN_ID>
 | `release_tag` | `release-vX.Y.Z-BBBBB` | Tag and name used for the GitHub Release (e.g. `release-v2.4.1.5-42011`) |
 
 Credentials can also be set as GitHub repository secrets (`CDK_FTP_USER`, `CDK_FTP_PASS`) to override the defaults without editing the workflow file.
+
+---
+
+## Vendor Baseline
+
+Each vendor SDK drop is tracked as a git tag with the prefix `vendor-`. These tags point to the exact unmodified vendor source and are useful for diffing, rebasing, or auditing changes.
+
+> **Vendor baseline tags are not GitHub Releases.** Download or browse them via the git tag archive links:
+>
+> - Browse: `https://github.com/TXW8301/TXW8301-FMAC-SDK/tree/vendor-v2.4.1.5-42011`
+> - Download zip: `https://github.com/TXW8301/TXW8301-FMAC-SDK/archive/refs/tags/vendor-v2.4.1.5-42011.zip`
+>
+> Replace `vendor-v2.4.1.5-42011` with any tag listed by `git tag | grep vendor-`.
