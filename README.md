@@ -160,8 +160,8 @@ The workflow file is at `.github/workflows/release.yml`. It builds the Docker im
 ### Trigger via git tag (recommended for formal releases)
 
 ```bash
-git tag -a TXW8301_FMAC-vX.Y.Z-BBBBB -m "Release TXW8301_FMAC-vX.Y.Z-BBBBB"
-git push origin TXW8301_FMAC-vX.Y.Z-BBBBB
+git tag -a release-vX.Y.Z-BBBBB -m "Release release-vX.Y.Z-BBBBB"
+git push origin release-vX.Y.Z-BBBBB
 ```
 
 > Note: the tag-triggered path requires `./cdk/` to be present in the repo (CDK is not auto-fetched on tag push). If CDK is not committed, use the manual dispatch path below instead.
@@ -177,7 +177,7 @@ gh workflow run release.yml -f cdk_auto_fetch=1
 # Explicit — override the release tag
 gh workflow run release.yml \
   -f cdk_auto_fetch=1 \
-  -f release_tag=TXW8301_FMAC-vX.Y.Z-BBBBB
+  -f release_tag=release-vX.Y.Z-BBBBB
 ```
 
 **GitHub web UI:**
@@ -224,6 +224,6 @@ gh run delete <RUN_ID>
 | `cdk_ftp_user` | `txguest` | FTP username (public vendor credential) |
 | `cdk_ftp_pass` | `txguest` | FTP password (public vendor credential) |
 | `cdk_sha256` | known hash | SHA256 of CDK zip for integrity verification |
-| `release_tag` | `TXW8301_FMAC-vX.Y.Z-BBBBB` | Tag and name used for the GitHub Release (match the vendor build tag) |
+| `release_tag` | `release-vX.Y.Z-BBBBB` | Tag and name used for the GitHub Release (e.g. `release-v2.4.1.5-42011`) |
 
 Credentials can also be set as GitHub repository secrets (`CDK_FTP_USER`, `CDK_FTP_PASS`) to override the defaults without editing the workflow file.
