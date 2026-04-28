@@ -18,6 +18,9 @@ int32 sys_atcmd_sysdbg(const char *cmd, char *argv[], uint32 argc)
         if (os_strcasecmp(arg, "irq") == 0) {
             sys_status.dbg_irq = (os_atoi(argv[1]) == 1);
         }
+        if (os_strcasecmp(arg, "net") == 0) {
+            sys_status.dbg_net = (os_atoi(argv[1]) == 1);
+        }
         atcmd_ok;
     } else {
         atcmd_error;

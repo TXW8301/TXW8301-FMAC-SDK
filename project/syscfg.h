@@ -125,6 +125,7 @@ struct system_status {
            dbg_lmac: 2,
            dbg_umac: 1,
            dbg_irq: 1,
+           dbg_net: 1,
            reset_wdt: 1,
            pair_success:1,
            upgrading: 1;

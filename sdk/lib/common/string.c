@@ -29,7 +29,7 @@ static const char *__print_color__[] = {
 };
 
 int printf(const char *format, ...)  __alias(hgprintf);
-
+int __wrap_printf(const char *format, ...)  __alias(hgprintf);
 int __cskyvprintfprintf(const char *format, ...)  __alias(hgprintf);
 
 ////////////////////////////////////////////////////////////////////////
@@ -193,14 +193,14 @@ void hgprintf(const char *fmt, ...)
     uint8 tick = 0;
     int32 len = 0;
 
-    if (__disable_print__) {
-        return;
-    }
-
     flag = disable_irq();
     _print_priv = __print_hook_priv;
     _print = __print_hook;
     enable_irq(flag);
+
+    if (_print == NULL && __disable_print__) {
+        return;
+    }
 
     va_start(ap, fmt);
     if (fmt[0] == 2) {

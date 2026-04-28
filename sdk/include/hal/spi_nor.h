@@ -45,6 +45,7 @@ struct spi_nor_flash {
     enum spi_nor_mode mode;
     struct os_mutex lock;
     const struct spi_nor_bus *bus;
+    uint8 bits_of_addr;
 };
 
 const struct spi_nor_bus *spi_nor_bus_get(enum spi_nor_mode mode);

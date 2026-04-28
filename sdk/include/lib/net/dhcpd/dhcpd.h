@@ -20,5 +20,6 @@ uint32 dhcpd_get_lease_ip(uint8 *mac);
 int32 dhcpd_start(char *ifname, struct dhcpd_param *param);
 void dhcpd_stop(char *ifname);
 void dhcpd_set_dns(uint32 dns1, uint32 dns2);
+void dhcpd_dump_ippool(void);
 
 #endif

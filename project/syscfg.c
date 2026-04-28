@@ -11,6 +11,7 @@
 #include "osal/work.h"
 #include "hal/gpio.h"
 #include "hal/dma.h"
+#include "lib/common/common.h"
 #include "lib/heap/sysheap.h"
 #include "lib/syscfg/syscfg.h"
 #include "lib/umac/wifi_mgr.h"
@@ -262,7 +263,7 @@ int32 wificfg_flush(uint8 ifidx)
     lmac_set_aggcnt(lmacops, sys_cfgs.agg_cnt);
     lmac_set_auto_chan_switch(lmacops, !sys_cfgs.auto_chsw);
     lmac_set_wakeup_io(lmacops, sys_cfgs.wkup_io, sys_cfgs.wkio_edge);
-    lmac_set_super_pwr(lmacops, sys_cfgs.super_pwr_set?sys_cfgs.super_pwr:1);
+    lmac_set_super_pwr(lmacops, sys_cfgs.super_pwr_set?sys_cfgs.super_pwr:TX_PWR_SUPER_EN);
     lmac_set_pa_pwr_ctrl(lmacops, !sys_cfgs.pa_pwrctrl_dis);
     lmac_set_vdd13(lmacops, sys_cfgs.dcdc13);
     lmac_set_ack_timeout_extra(lmacops, sys_cfgs.ack_tmo);
@@ -284,7 +285,8 @@ int32 wificfg_flush(uint8 ifidx)
 void syscfg_dump(void)
 {
     int32 i = 0;
-    _os_printf("SYSCFG:\r\n");
+    _os_printf("%s", sdk_version_str());
+    _os_printf("SYSCFG: \r\n");
     _os_printf("  mac:"MACSTR", bssid:"MACSTR"\r\n", MAC2STR(sys_cfgs.mac), MAC2STR(sys_cfgs.bssid));
     _os_printf("  mode:%s, bss_bw:%d\r\n",
               wificfg_wifimode_str(),
@@ -310,7 +312,7 @@ void syscfg_dump(void)
               sys_cfgs.agg_cnt);
     _os_printf("  txpower:%d, super_pwr:%d, dcdc13:%d, pa_pwrctrl_dis:%d\r\n",
               sys_cfgs.txpower,
-              sys_cfgs.super_pwr_set?sys_cfgs.super_pwr:1,
+              sys_cfgs.super_pwr_set?sys_cfgs.super_pwr:TX_PWR_SUPER_EN,
               sys_cfgs.dcdc13,
               sys_cfgs.pa_pwrctrl_dis);
     _os_printf("  bss_max_idle:%d, beacon_int:%d, dtim_period:%d, aplost_time:%d, auto_sleep_time:%d\r\n",
@@ -687,9 +689,9 @@ int32 wificfg_set_acs(uint8 acs, uint8 tmo)
 int32 wificfg_set_pri_chan(uint8 pri_chan)
 {
     os_printf("set pri_chan: new:%d, cur:%d\r\n", pri_chan, sys_cfgs.pri_chan);
+    lmac_set_pri_chan(lmacops, pri_chan); // umac和驱动可能不相同，每次都设置一下
     if (sys_cfgs.pri_chan != pri_chan) {
         sys_cfgs.pri_chan = pri_chan;
-        lmac_set_pri_chan(lmacops, pri_chan);
         wificfg_save(0);
     }
     return 0;

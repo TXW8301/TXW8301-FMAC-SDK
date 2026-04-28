@@ -1095,9 +1095,9 @@ Board: txw4002a
     </BuildConfig>
   </BuildConfigs>
   <DebugSessions>
-    <watchExpressions>ah_dsleep:1;sizeof(struct dsleep_cfg):1;&amp;__sleep_data_start:1</watchExpressions>
-    <memoryExpressions>0x20000000;;;</memoryExpressions>
-    <statistics>;;MHZ;;MHZ;;up</statistics>
+    <watchExpressions>ah_dsleep:1;sizeof(struct dsleep_cfg):1;&amp;__sleep_data_start:1;flash:1;addr:1;n_sector:1;remain_size:1</watchExpressions>
+    <memoryExpressions>0x00ff000;;;</memoryExpressions>
+    <statistics>;;MHZ;</statistics>
     <peripheralTabs/>
     <WatchDisplayFormat>1</WatchDisplayFormat>
     <LocalDisplayFormat>1</LocalDisplayFormat>

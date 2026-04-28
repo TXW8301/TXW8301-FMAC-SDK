@@ -243,6 +243,7 @@ __init static void sys_wifi_init(void)
 
 #ifdef DUAL_ANT_OPT
     lparam.dual_ant = 1;//enable dual ant
+    lparam.dual_ant_ctrl_io = ANT_CTRL_PIN;
 #else
     lparam.dual_ant = 0;//disable dual ant
 #endif
@@ -361,41 +362,102 @@ static void sys_dhcpc_check(void)
 }
 #endif
 
-static void sys_dbginfo_print(void)
+static void sys_print_dbgtime(uint32 *buff, uint32 size)
 {
-    static uint8 _print_buf[512];
-    static int8 print_interval = 0;
-    if (print_interval++ >= 5) {
-        if (sys_status.dbg_top) {
-            cpu_loading_print(sys_status.dbg_top == 2, (struct os_task_info *)_print_buf, sizeof(_print_buf)/sizeof(struct os_task_info));
-        }
-        if (sys_status.dbg_heap) {
-            sysheap_status(&sram_heap, (uint32 *)_print_buf, sizeof(_print_buf)/4, 0);
-            skbpool_status((uint32 *)_print_buf, sizeof(_print_buf)/4, 0);
-        }
-        if (sys_status.dbg_lmac) {
-            lmac_transceive_statics(sys_status.dbg_lmac);
-        }
-        if (sys_status.dbg_umac) {
-            ieee80211_status(_print_buf, sizeof(_print_buf));
-            wifi_mgr_status();
-        }
-        if (sys_status.dbg_irq) {
-            irq_status();
+#if SYS_APP_SNTP
+    struct timeval tv;
+    gettimeofday(&tv, 0);
+    tv.tv_sec  += 8 * 3600; //时区
+    os_printf("system time: %s\r\n", ctime((const time_t *)&tv.tv_sec));
+#endif
+}
+
+static void sys_print_dbgtop(uint32 *buff, uint32 size)
+{
+    if (sys_status.dbg_top) {  //打印CPU使用率
+        cpu_loading_print(sys_status.dbg_top == 2, (struct os_task_info *)buff, size / sizeof(struct os_task_info));
+    }
+}
+
+static void sys_print_dbgheap(uint32 *buff, uint32 size)
+{
+    if (sys_status.dbg_heap) { //打印Heap使用情况
+        sysheap_status(&sram_heap, buff, size / 4, 0);
+#ifdef PSRAM_HEAP
+        sysheap_status(&psram_heap, buff, size / 4, 0);
+#endif
+    } else {
+    }
+}
+
+void sys_print_dbglmac(uint32 *buff, uint32 size)
+{
+    if (sys_status.dbg_lmac) {
+        lmac_transceive_statics(sys_status.dbg_lmac);
+    }
+}
+
+void sys_print_dbgumac(uint32 *buff, uint32 size)
+{
+    if (sys_status.dbg_umac) { //打印WIFI调试信息
+        os_printf("-----------------------------------------------------\r\n");
+        ieee80211_status((uint8 *)buff, size);
+    }
+}
+
+static void sys_print_dbgnet(uint32 *buff, uint32 size)
+{
+    struct netif *nif;
+
+    if (sys_status.dbg_net) {
+        os_printf("-----------------------------------------------------\r\n");
+        os_printf("Network Info:\r\n");
+        nif = netif_find("w0");
+        if (nif) {
+            os_printf("  w0: (%s) "IPSTR"/"IPSTR"/"IPSTR"\r\n",
+                      (sys_cfgs.dhcpc_en && sys_status.dhcpc_done) ? "DHCP" : "Static",
+                      IP2STR_N(ip_addr_get_ip4_u32(&nif->ip_addr)),
+                      IP2STR_N(ip_addr_get_ip4_u32(&nif->netmask)),
+                      IP2STR_N(ip_addr_get_ip4_u32(&nif->gw)));
         }
 
-#if SYS_APP_SNTP //sample code for NTP
-        do {
-            struct timeval tv;
-            gettimeofday(&tv, 0);
-            tv.tv_sec  += 8 * 3600; //时区
-            os_printf("system time: %s\r\n", ctime((const time_t *)&tv.tv_sec));
-        } while (0);
+        nif = netif_find("e0");
+        if (nif) {
+            os_printf("  e0: (%s) "IPSTR"/"IPSTR"/"IPSTR"\r\n", sys_cfgs.dhcpc_en ? "DHCP" : "Static",
+                      IP2STR_N(ip_addr_get_ip4_u32(&nif->ip_addr)),
+                      IP2STR_N(ip_addr_get_ip4_u32(&nif->netmask)),
+                      IP2STR_N(ip_addr_get_ip4_u32(&nif->gw)));
+        }
+
+#if IP_NAT
+        os_printf("-----------------------------------------------------\r\n");
+        ip4_nat_status();
 #endif
 
+    }
+}
+
+static void sys_dbginfo_print(void)
+{
+    static int8 print_interval = 0;
+#if 0
+    static uint32 _print_buf[256];
+#else
+    uint32 _print_buf[256];
+    ASSERT(sizeof(_print_buf) < 1600); //使用task堆栈，避免堆栈溢出
+#endif
+
+    if (print_interval++ >= 5) { // 5秒打印一次
+        sys_print_dbgtop(_print_buf, sizeof(_print_buf));
+        sys_print_dbgheap(_print_buf, sizeof(_print_buf));
+        sys_print_dbglmac(_print_buf, sizeof(_print_buf));
+        sys_print_dbgumac(_print_buf, sizeof(_print_buf));
+        sys_print_dbgtime(_print_buf, sizeof(_print_buf));
+        sys_print_dbgnet(_print_buf, sizeof(_print_buf));
         print_interval = 0;
     }
 }
+
 
 static int32 sys_main_loop(struct os_work *work)
 {

@@ -194,6 +194,9 @@ __init void malloc_init(void)
 __init void pre_main(void)
 {
     assert_holdup = ASSERT_HOLDUP;
+#ifdef DIS_BOOT_PRINT
+    disable_print(1);
+#endif
     malloc_init();
     csi_kernel_init();
     dev_init();

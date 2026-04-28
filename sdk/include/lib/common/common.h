@@ -14,6 +14,7 @@ void module_version_show(void);
 extern uint32 sdk_version;
 extern uint32 svn_version;
 extern uint32 app_version;
+char *sdk_version_str(void);
 
 #endif
 

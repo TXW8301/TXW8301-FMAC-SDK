@@ -129,6 +129,8 @@ __init int32 spi_nor_attach(struct spi_nor_flash *flash, uint32 dev_id)
     uint8 id[3];
 
     ASSERT(flash->size && flash->sector_size);
+    flash->bits_of_addr = flash->size > 0x1000000 ? 32 : 24;
+
     os_mutex_init(&flash->lock);
     flash->bus = spi_nor_bus_get(flash->mode);
     ASSERT(flash->bus);

@@ -93,6 +93,10 @@
 #define DSLEEP_PAPWRCTL_DIS 0
 #endif
 
+#ifndef TX_PWR_SUPER_EN
+#define TX_PWR_SUPER_EN 1
+#endif
+
 #ifndef TX_POWER
 #define TX_POWER 20
 #endif
@@ -197,7 +201,9 @@
 #define WIFIMGR_FRM_TYPE WIFIMGR_FRM_TYPE_HGIC
 #endif
 
-#define ANT_CTRL_PIN PA_31        //FMAC用PA31来做双天线选择
+#ifndef ANT_CTRL_PIN
+#define ANT_CTRL_PIN PA_31        //FMAC默认用PA31来做双天线选择
+#endif
 
 
 #endif

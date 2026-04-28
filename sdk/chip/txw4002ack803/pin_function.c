@@ -318,6 +318,7 @@ static int spi_pin_func(int dev_id, int request)
                 gpio_set_dir(PIN_SPI1_IO0, GPIO_DIR_INPUT);
                 gpio_set_dir(PIN_SPI1_IO1, GPIO_DIR_INPUT);
             }
+            break;
         case HG_SPI3_DEVID:
             if (request) {
                 gpio_set_altnt_func(PIN_SPI3_CS, 1);

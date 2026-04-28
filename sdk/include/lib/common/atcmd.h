@@ -45,4 +45,6 @@ int32 sys_wifi_atcmd_wakeup(const char *cmd, char *argv[], uint32 argc);
 int32 sys_wifi_atcmd_ap_psmode(const char *cmd, char *argv[], uint32 argc);
 int32 sys_wifi_atcmd_dsleep(const char *cmd, char *argv[], uint32 argc);
 
+int32 sys_wifi_atcmd_set_wmm_param(const char *cmd, char *argv[], uint32 argc);
+
 #endif

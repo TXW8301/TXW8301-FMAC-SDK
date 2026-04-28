@@ -37,6 +37,7 @@ void sntp_client_disable(int8 disable);
 void sntp_set_sport(uint16 server_port);
 int32 dns_redirect_init(void);
 int32 dns_redirect_add(const char *domain, const char *ifname);
+void uart_p2p_init(int32 uart_p2p_dev, uint32 baudrate);
 
 #ifdef __cplusplus
 }

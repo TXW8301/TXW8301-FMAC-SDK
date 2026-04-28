@@ -34,8 +34,11 @@ extern "C" {
 struct lmac_init_param {
     uint32 rxbuf, rxbuf_size;
     uint32 tdma_buff, tdma_buff_size;
-    uint8  uart_tx_io;//0 for pa13, 1 for pa11, 2 for pa31
-    uint8  dual_ant;  //0 for disable，1 for enable
+    uint8  uart_tx_io: 2, dual_ant: 1, saw_2in1: 1;
+    //uart_tx_io: 0 for pa13, 1 for pa11, 2 for pa31
+    //dual_ant: 0 for disable，1 for enable
+    //saw_2in1: 0 for disable, 1 for enable
+    uint8  dual_ant_ctrl_io;
 };
 
 struct lmac_acs_ctl {
@@ -219,6 +222,7 @@ struct dsleep_cfg {
                                 ant_dual                : 1,
                                 ant_sel                 : 1,
                                 uart_tx_io              : 2,
+                                saw_2in1                : 1,
                                 bss_1m_ind              : 1;
     uint8                       ant_ctrl_pin1           : 7,
                                 ant_ctrl_pin1_valid     : 1;

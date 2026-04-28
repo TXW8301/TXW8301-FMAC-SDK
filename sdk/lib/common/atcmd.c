@@ -86,14 +86,14 @@ int32 sys_atcmd_iperf2(const char *cmd, char *argv[], uint32 argc)
     if(argc > 0){
         mode = argv[0];
         if(os_strncmp(argv[0], "c", 1) == 0 || os_strncmp(argv[0], "C", 1) == 0) {
-            os_printf("%s:iperf2 TCP CLIENT mode,remote IP:%s,port:%d,time:%d\n",
+            atcmd_printf("%s:iperf2 TCP CLIENT mode,remote IP:%s,port:%d,time:%d\n",
                 __FUNCTION__,argv[1],os_atoi(argv[2]), os_atoi(argv[3]));
             sys_lwiperf_tcp_client_start(argv[1], os_atoi(argv[2]), os_atoi(argv[3]));
         } else if (os_strncmp(argv[0], "s", 1) == 0 || os_strncmp(argv[0], "S", 1) == 0) {
-            os_printf("%s:iperf2 TCP Server mode,port:%d\n",__FUNCTION__,os_atoi(argv[1]));
+            atcmd_printf("%s:iperf2 TCP Server mode,port:%d\n",__FUNCTION__,os_atoi(argv[1]));
             sys_lwiperf_tcp_server_start(os_atoi(argv[1]));
         } else {
-            os_printf("Unknow iperf mode:%s\n",mode);
+            atcmd_printf("Unknow iperf mode:%s\n",mode);
         }
     }
     return 0;
@@ -152,11 +152,11 @@ int32 sys_wifi_atcmd_set_encrypt(const char *cmd, char *argv[], uint32 argc)
 #if WIFI_REPEATER_SUPPORT
             sys_cfgs.r_key_mgmt = WPA_KEY_MGMT_PSK;
             if (MODE_IS_REPEATER(sys_cfgs.wifi_mode)) {
-                os_printf("wifimode = %d mode = %d, r_key_mgmt = %d\r\n", sys_cfgs.wifi_mode, mode_ap, sys_cfgs.r_key_mgmt);
+                atcmd_printf("wifimode = %d mode = %d, r_key_mgmt = %d\r\n", sys_cfgs.wifi_mode, mode_ap, sys_cfgs.r_key_mgmt);
                 ieee80211_conf_set_keymgmt(mode_ap, sys_cfgs.r_key_mgmt);
             }
 #endif
-            os_printf("Set encrypt!\r\n");
+            atcmd_printf("Set encrypt!\r\n");
             syscfg_save();
             atcmd_ok;
         } else if ('0' == argv[0][0]) {
@@ -173,12 +173,12 @@ int32 sys_wifi_atcmd_set_encrypt(const char *cmd, char *argv[], uint32 argc)
                 ieee80211_conf_set_keymgmt(mode_ap, sys_cfgs.r_key_mgmt);
             }
 #endif
-            os_printf("Clear encrypt!\r\n");
+            atcmd_printf("Clear encrypt!\r\n");
             syscfg_save();
             atcmd_ok;
         } else {
             atcmd_error;
-            os_printf("encrypt atcmd err\r\n");
+            atcmd_printf("encrypt atcmd err\r\n");
         }
     }
     return 0;
@@ -191,7 +191,7 @@ int32 sys_wifi_atcmd_set_ssid(const char *cmd, char *argv[], uint32 argc)
     uint8 ssid_len;
 
     if (argc == 1 && argv[0][0] == '?') {
-        os_printf("SSID: %s\r\n", sys_cfgs.ssid);
+        atcmd_printf("SSID: %s\r\n", sys_cfgs.ssid);
         atcmd_ok;
         return 0;
 
@@ -199,7 +199,7 @@ int32 sys_wifi_atcmd_set_ssid(const char *cmd, char *argv[], uint32 argc)
 
         ssid_len = os_strlen(argv[0]);
         if (ssid_len > SSID_MAX_LEN) {
-            os_printf("Input SSID length is %d, > SSID_MAX_LEN(32)\r\n",ssid_len);
+            atcmd_printf("Input SSID length is %d, > SSID_MAX_LEN(32)\r\n",ssid_len);
             atcmd_error;
             return 0;
         }
@@ -208,7 +208,7 @@ int32 sys_wifi_atcmd_set_ssid(const char *cmd, char *argv[], uint32 argc)
         if (os_strncmp(sys_cfgs.ssid, ssid, SSID_MAX_LEN)) {
             os_memset(sys_cfgs.bssid, 0, 6);
             os_strncpy(sys_cfgs.ssid, ssid, SSID_MAX_LEN);
-            os_printf("set new ssid: %s\r\n", sys_cfgs.ssid);
+            atcmd_printf("set new ssid: %s\r\n", sys_cfgs.ssid);
             if (os_strlen(sys_cfgs.passwd) > 0) {
                 wpa_passphrase(sys_cfgs.ssid, sys_cfgs.passwd, sys_cfgs.psk);
             }
@@ -227,7 +227,7 @@ int32 sys_wifi_atcmd_set_ssid(const char *cmd, char *argv[], uint32 argc)
             atcmd_ok;
             return 0;
         } else {
-            os_printf("set same ssid: %s\r\n", sys_cfgs.ssid);
+            atcmd_printf("set same ssid: %s\r\n", sys_cfgs.ssid);
             return 0;
         }
     }
@@ -254,7 +254,7 @@ int32 sys_wifi_atcmd_set_key(const char *cmd, char *argv[], uint32 argc)
             if (os_strcmp(sys_cfgs.passwd, passwd)) {
                 os_strncpy(sys_cfgs.passwd, passwd, PASSWD_MAX_LEN);
                 if (os_strlen(sys_cfgs.ssid) > 0) {
-                    os_printf("Wpa_passphrase...\r\n");
+                    atcmd_printf("Wpa_passphrase...\r\n");
                     wpa_passphrase(sys_cfgs.ssid, sys_cfgs.passwd, sys_cfgs.psk);
                 }
                 if (ifidx < 0) {
@@ -299,7 +299,7 @@ int32 sys_wifi_atcmd_set_psk(const char *cmd, char *argv[], uint32 argc)
                 } else {
                     ieee80211_conf_set_psk(ifidx, sys_cfgs.psk);
                 }
-                os_printf("set new psk\r\n");
+                atcmd_printf("set new psk\r\n");
                 syscfg_save();
             }
             atcmd_ok;
@@ -319,7 +319,7 @@ int32 sys_wifi_atcmd_set_wifimode(const char *cmd, char *argv[], uint32 argc)
         atcmd_resp("%s", wificfg_wifimode_str());
     } else if (argc == 1) {
         old_mode = sys_cfgs.wifi_mode;
-        os_printf("mode=%s ",argv[0]);
+        atcmd_printf("mode=%s ",argv[0]);
         if (os_strcasecmp(argv[0], "ap") == 0) {
             mode = WIFI_MODE_AP;
         } else if (os_strcasecmp(argv[0], "sta") == 0) {
@@ -401,11 +401,11 @@ int32 sys_wifi_atcmd_pair(const char *cmd, char *argv[], uint32 argc)
     uint8 ifidx = wificfg_get_ifidx(sys_cfgs.wifi_mode, 0);
 
     if(magic==0) {
-        os_printf("Stop pairing!\r\n");
+        atcmd_printf("Stop pairing!\r\n");
     } else if(magic==1){
-        os_printf("Start pairing!\r\n");
+        atcmd_printf("Start pairing!\r\n");
     } else {
-        os_printf("Start pairing in group %d!\r\n", magic);
+        atcmd_printf("Start pairing in group %d!\r\n", magic);
     }
 
     if (ifidx < 0) {
@@ -424,7 +424,7 @@ int32 sys_wifi_atcmd_unpair(const char *cmd, char *argv[], uint32 argc)
     uint8 ifidx = wificfg_get_ifidx(sys_cfgs.wifi_mode, 0);
     if (argc > 0 && argv[0][0] != '?') {
         STR2MAC(argv[0], mac);
-        os_printf("unpair:"MACSTR"\r\n", MAC2STR(mac));
+        atcmd_printf("unpair:"MACSTR"\r\n", MAC2STR(mac));
         if (ifidx < 0) {
             ieee80211_unpair(WIFI_MODE_AP, mac);
             ieee80211_unpair(WIFI_MODE_WNBAP, mac);
@@ -445,9 +445,9 @@ int32 sys_wifi_atcmd_aphide(const char *cmd, char *argv[], uint32 argc)
     } else if (argc == 1) {
         sys_cfgs.ap_hide = os_atoi(argv[0]) ? 1 : 0;
         if(sys_cfgs.ap_hide){
-            os_printf("AP_Hide enabled!\r\n");
+            atcmd_printf("AP_Hide enabled!\r\n");
         }else{
-            os_printf("AP_Hide disabled!\r\n");
+            atcmd_printf("AP_Hide disabled!\r\n");
         }
         if (ifidx < 0) {
             ieee80211_conf_set_aphide(WIFI_MODE_AP, sys_cfgs.ap_hide);
@@ -502,7 +502,7 @@ int32 sys_wifi_atcmd_roam(const char *cmd, char *argv[], uint32 argc)
         sys_cfgs.roam_rssi_diff = roam_rssi_diff;
         sys_cfgs.roam_rssi_int = roam_rssi_int;
 
-        os_printf("set roaming %s\r\n", sys_cfgs.roam_start ? "enable" : "disable");        
+        atcmd_printf("set roaming %s\r\n", sys_cfgs.roam_start ? "enable" : "disable");        
         if(chg){
             syscfg_save();
         }
@@ -529,7 +529,7 @@ int32 sys_ble_atcmd_blenc(const char *cmd, char *argv[], uint32 argc)
                 if (ble_demo_stop(bt_ops)) {
                     atcmd_error;
                 } else {
-                    os_printf("\n\nble close \r\n\n");
+                    atcmd_printf("\n\nble close \r\n\n");
                 }
                 break;
             case 1:
@@ -538,7 +538,7 @@ int32 sys_ble_atcmd_blenc(const char *cmd, char *argv[], uint32 argc)
                 if (ble_demo_start(bt_ops, mode - 1)) {
                     atcmd_error;
                 } else {
-                    os_printf("\n\nset ble mode = %d \r\n\n", mode);
+                    atcmd_printf("\n\nset ble mode = %d \r\n\n", mode);
                 }
                 break;
             default:
@@ -557,7 +557,7 @@ int32 sys_wifi_atcmd_ft(const char *cmd, char *argv[], uint32 argc)
 
     os_memset(&ft, 0, sizeof(ft));
     str2mac(argv[0], ft.bssid_new);
-    os_printf("FT_start: target_bssid= "MACSTR" argc= %d\r\n", MAC2STR(ft.bssid_new), argc);
+    atcmd_printf("FT_start: target_bssid= "MACSTR" argc= %d\r\n", MAC2STR(ft.bssid_new), argc);
     ieee80211_conf_set_ft(ifidx, &ft);
     atcmd_ok;
 #endif
@@ -780,24 +780,30 @@ int32 sys_wifi_atcmd_chan_list(const char *cmd, char *argv[], uint32 argc)
     uint8 ifidx = wificfg_get_ifidx(sys_cfgs.wifi_mode, 0);
     
     if (argc == 1 && argv[0][0] == '?') {
-        os_printf("+CHAN_LIST:");
+        atcmd_printf("+CHAN_LIST:");
         for (i = 0; i < sys_cfgs.chan_cnt; ++i) {
             if (i + 1 < sys_cfgs.chan_cnt) {
-                _os_printf("%d,", sys_cfgs.chan_list[i]);
+                atcmd_printf("%d,", sys_cfgs.chan_list[i]);
             } else {
-                _os_printf("%d\r\n", sys_cfgs.chan_list[i]);
+                atcmd_printf("%d\r\n", sys_cfgs.chan_list[i]);
             }
         }
     } else {
         chan_cnt = argc > 16 ? 16 : argc;
         for (i = 0; i < chan_cnt; ++i) {
-            chan_list[i] = os_atoi(argv[i]);
-        }
-
-        if(sysctrl_freq_type_match(chan_list[0])){
-            os_printf("invalid freq param: %d, module_type:%d\r\n", chan_list[0], module_efuse_info.module_type);
-            atcmd_error;
-            return 0;
+            //printf("os_atoi(argv[i])=%d........\r\n",os_atoi(argv[i]));
+            if (os_atoi(argv[i])<65536) {
+                chan_list[i] = os_atoi(argv[i]);
+            } else {
+                atcmd_printf("invalid freq param: %d\r\n", os_atoi(argv[i]));
+                atcmd_error;
+                return 0;
+            }
+            if(sysctrl_freq_type_match(chan_list[i])==RET_ERR){
+                atcmd_printf("invalid freq param: %d, module_type:%d\r\n", chan_list[i], module_efuse_info.module_type);
+                atcmd_error;
+                return 0;
+            }
         }
 
         if (sys_cfgs.chan_cnt != chan_cnt || os_memcmp(chan_list, sys_cfgs.chan_list, chan_cnt * sizeof(uint16))) {
@@ -815,7 +821,9 @@ int32 sys_wifi_atcmd_chan_list(const char *cmd, char *argv[], uint32 argc)
             }
             syscfg_save();
             atcmd_ok;
-        }
+        } else {
+			atcmd_ok;
+		}
     }
     return 0;
 }
@@ -872,3 +880,35 @@ int32 sys_wifi_atcmd_dsleep(const char *cmd, char *argv[], uint32 argc)
     return 0;
 }
 #endif
+
+
+int32 sys_wifi_atcmd_set_wmm_param(const char *cmd, char *argv[], uint32 argc)
+{
+    uint8 ac;
+	uint8 ifidx = wificfg_get_ifidx(sys_cfgs.wifi_mode, 0);
+    struct ieee80211_wmm_param param;
+	  
+    if (argc == 1 && argv[0][0] == '?') {
+        ieee80211_conf_get_wmm_param(ifidx, 0, &param);
+        atcmd_printf("BE cw_min=%d cw_max=%d \r\n", param.cw_min, param.cw_max);
+        ieee80211_conf_get_wmm_param(ifidx, 1, &param);
+        atcmd_printf("BK cw_min=%d cw_max=%d \r\n", param.cw_min, param.cw_max);
+        ieee80211_conf_get_wmm_param(ifidx, 2, &param);
+        atcmd_printf("VI cw_min=%d cw_max=%d \r\n", param.cw_min, param.cw_max);
+        ieee80211_conf_get_wmm_param(ifidx, 3, &param);
+        atcmd_printf("VO cw_min=%d cw_max=%d \r\n", param.cw_min, param.cw_max);
+    } else if (argc == 3) {
+        ac = os_atoi(argv[0]);
+        if (ac<4) {
+            ieee80211_conf_get_wmm_param(ifidx, ac, &param);
+            param.cw_min = os_atoi(argv[1]);
+            param.cw_max = os_atoi(argv[2]);
+            ieee80211_conf_set_wmm_param(ifidx, ac, &param);
+            atcmd_ok;
+        } else {
+            atcmd_error;
+        }
+    }
+    
+    return 0;
+}

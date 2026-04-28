@@ -115,6 +115,7 @@ static int32 hguart_open(struct uart_device *uart_t, uint32 baudrate)
     int32 ret;
 
     if (uart->opened) {
+        hguart_set_baudrate(uart->hw, baudrate);
         return RET_OK;
     }
 

@@ -143,6 +143,7 @@ int32 sys_ieee80211_event_cb(uint8 ifidx, uint16 evt, uint32 param1, uint32 para
             break;
         case IEEE80211_EVENT_PAIR_START:
             sys_status.pair_success = 0;
+            os_printf("inteface%d: pairing start\r\n", ifidx);
             break;
         case IEEE80211_EVENT_PAIR_SUCCESS:
             sys_status.pair_success = 1;

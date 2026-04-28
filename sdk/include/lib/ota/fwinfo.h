@@ -1,7 +1,7 @@
 #ifndef _HGIC_FWINFO_H_
 #define _HGIC_FWINFO_H_
 
-#define fwinfo_dbg(fmt, ...) //os_printf("%s:%d::"fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define fwinfo_dbg(fmt, ...) os_printf("%s:%d::"fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define fwinfo_err(fmt, ...) os_printf(fmt, ##__VA_ARGS__)
 
 #define FWINFO_BOOT_HDR    0x5a69

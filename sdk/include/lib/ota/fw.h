@@ -27,7 +27,7 @@ struct ota_ctrl {
     uint32 base_addr;
     uint32 local_off;
     uint32 marker;
-    uint32 earse_locate;
+    uint16 erase_start, erase_end;
     uint8  verify_read_buf[OTA_VERIFY_READ_BUF_SIZE];
 };
 
